@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "ChillTool's Loader",
+  "description": "Carica e esegue l'estensione custom",
+  "version": "1.0",
+  "permissions": [
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://uhmegle.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://uhmegle.com/*"
+      ],
+      "js": ["inject.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "scripts/uhmegle.js",
+        "scripts/buttons.js",
+        "scripts/antip.js"
+      ],
+      "matches": ["https://uhmegle.com/*"]
+    }
+  ]
+}
