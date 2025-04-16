@@ -13,12 +13,6 @@ DIFFIDATE DA COPIE
 
 Le versioni rilasciate qui sono le più recenti e potrebbero includere correzioni, ottimizzazioni e nuove funzionalità. Rispetto alle versioni nel nostro server Discord, queste versioni potrebbero essere più difficili da rilevare, offrendo una maggiore sicurezza nell'uso.
 
-### Aggiornamenti
-
-- **Versione 1.0**: Prima release ufficiale con funzionalità di base.
-- **Versione 1.1**: Ottimizzazione della stabilità e miglioramento della sicurezza.
-- **Versione 1.2**: Aggiunta di nuove funzionalità e miglioramenti nell'interfaccia utente.
-
 ## Installazione
 
 1. Scarica l'ultima versione dell'estensione da questa pagina.
