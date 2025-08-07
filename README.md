@@ -16,7 +16,7 @@ Le versioni rilasciate qui sono le più recenti e potrebbero includere correzion
 ## Installazione
 
 1. Scarica l'ultima versione dell'estensione da questa pagina.
-2. Segui le istruzioni nel nostro [Discord]([https://discord.gg/cspot](https://discord.gg/FBsPkXDche)) per l'installazione.
+2. Segui le istruzioni nel nostro [Discord](https://discord.gg/FBsPkXDche) per l'installazione.
 3. Attiva l'estensione nel tuo browser.
 
 ## Contribuire
