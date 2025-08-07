@@ -1,33 +1,40 @@
-# DISCLAIMER
-DIFFIDATE DA COPIE
+# ⚠️ DISCLAIMER
 
-# ChillTool's
+**Beware of imitations – use only the official ChillTool's release.**
 
-**ChillTool's** è un'estensione in continuo aggiornamento, progettata per offrire nuove funzionalità e miglioramenti. Qui puoi trovare le versioni più recenti dell'estensione, che potrebbero essere più "sgamabili" rispetto a quelle disponibili nel nostro server Discord.
+# 🌐 ChillTool's
 
-## Cosa è ChillTool's?
+**ChillTool's** is a constantly evolving browser extension, designed to unlock powerful features and improvements for your Uhmegle experience. Here, you'll find the **latest and most stealth-optimized** versions — which may be harder to detect than those shared on our Discord server.
 
-**ChillTool's** è un'estensione che permette di accedere a funzionalità avanzate su Uhmegle, con aggiornamenti regolari per migliorare l'esperienza dell'utente.
+## ❓ What is ChillTool's?
 
-## Versioni
+**ChillTool's** is a cutting-edge extension built to enhance Uhmegle with advanced functionalities, regular updates, and a smoother, more controlled user experience.
 
-Le versioni rilasciate qui sono le più recenti e potrebbero includere correzioni, ottimizzazioni e nuove funzionalità. Rispetto alle versioni nel nostro server Discord, queste versioni potrebbero essere più difficili da rilevare, offrendo una maggiore sicurezza nell'uso.
+## 🚀 Versions
 
-## Installazione
+The versions available here are the **most recent builds**, featuring:
 
-1. Scarica l'ultima versione dell'estensione da questa pagina.
-2. Segui le istruzioni nel nostro [Discord](https://discord.gg/FBsPkXDche) per l'installazione.
-3. Attiva l'estensione nel tuo browser.
+* Bug fixes
+* Performance optimizations
+* New features
+  Compared to those on our Discord server, these versions may offer **better stealth and detection resistance**.
 
-## Contribuire
+## 🔧 Installation
 
-Se desideri contribuire al progetto, sentiti libero di forkare la repository, fare delle modifiche e aprire una pull request!
+1. Download the latest version of ChillTool's from this page.
+2. Follow the installation steps provided in our [Discord community](https://discord.gg/FBsPkXDche).
+3. Enable the extension in your browser — you're all set!
 
-## Licenza
+## 🤝 Contributing
 
-Questo progetto è rilasciato sotto la [MIT License](LICENSE).
+Want to help improve ChillTool's?
+Feel free to fork the repo, make your changes, and open a pull request — we’d love to see what you build.
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-**ChillTool's - Estensione Uhmegle**  
-Resta aggiornato sulle ultime versioni per ottenere la miglior esperienza possibile!
+**ChillTool's – The Ultimate Uhmegle Extension**
+Stay up to date with the newest releases for the best possible experience.
