@@ -23,12 +23,12 @@ The versions available here are the **most recent builds**, featuring:
 
 1. Download the latest version of ChillTool's from this page.
 2. Follow the installation steps provided in our [Discord community](https://discord.gg/FBsPkXDche).
-3. Enable the extension in your browser — you're all set!
+3. Enable the extension in your browser and you're all set!
 
 ## 🤝 Contributing
 
 Want to help improve ChillTool's?
-Feel free to fork the repo, make your changes, and open a pull request — we’d love to see what you build.
+Feel free to fork the repo, make your changes, and open a pull request, we’d love to see what you build.
 
 ## 📄 License
 
