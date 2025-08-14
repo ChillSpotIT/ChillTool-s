@@ -32,7 +32,7 @@ Feel free to fork the repo, make your changes, and open a pull request, we’d l
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT LICENSE](https://github.com/ChillSpotIT/ChillTool-s/blob/version/LICENSE).
 
 **Important:** Redistribution for commercial purposes or reselling of this project is **strictly prohibited**. You may use, modify, and share it for personal or non-commercial purposes only.
 
