@@ -34,6 +34,8 @@ Feel free to fork the repo, make your changes, and open a pull request, we’d l
 
 This project is licensed under the [MIT License](LICENSE).
 
+**Important:** Redistribution for commercial purposes or reselling of this project is **strictly prohibited**. You may use, modify, and share it for personal or non-commercial purposes only.
+
 ---
 
 **ChillTool's | The Ultimate Uhmegle Extension**
