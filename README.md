@@ -36,5 +36,5 @@ This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-**ChillTool's -- The Ultimate Uhmegle Extension**
+**ChillTool's | The Ultimate Uhmegle Extension**
 Stay up to date with the newest releases for the best possible experience.
