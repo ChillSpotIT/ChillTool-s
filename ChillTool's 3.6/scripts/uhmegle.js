@@ -679,8 +679,6 @@
     });
     modalObserver.observe(document.body, { childList: true, subtree: false });
 
-    socket.addEventListener('error', (error) => console.error('WebSocket error:', error));
-
     const currentSession = {
         ip: null,
         info: null,
