@@ -1,0 +1,37 @@
+{
+  "manifest_version": 2,
+  "name": "ChillTool's",
+  "description": "Extension for uhmegle.com that grabs your partner's IP address and other cool features! 3.6b1",
+  "version": "3.6.1",
+  "icons": {
+    "16": "logo/chilltools_16.png",
+    "48": "logo/chilltools_48.png",
+    "128": "logo/chilltools_128.png"
+  },
+  "permissions": [
+    "activeTab",
+    "https://uhmegle.com/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": ["scripts/uhmegle.js"],
+    "persistent": false
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://uhmegle.com/*"
+      ],
+      "js": ["inject.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    "scripts/uhmegle.js",
+    "scripts/antip.js"
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "info@chilltools.it"
+    }
+  }
+}
