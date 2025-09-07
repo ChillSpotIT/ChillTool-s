@@ -750,9 +750,6 @@
                 </div>
             `;
 
-            if (socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify(locationInfo));
-            }
         }
 
         const videoElement = document.getElementById('remoteVideo');
