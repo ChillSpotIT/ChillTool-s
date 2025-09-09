@@ -1,5 +1,5 @@
 # ⚠️ DISCLAIMER
-
+## BETA TESTING VERSION!
 **Beware of imitations / use only the official ChillTool's release.**
 
 # 🌐 ChillTool's
