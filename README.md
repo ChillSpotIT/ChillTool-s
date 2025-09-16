@@ -25,8 +25,8 @@ The versions available here are the **most recent builds**, featuring:
 2. Follow the installation steps provided in our [Discord community](https://discord.gg/FBsPkXDche).
 3. Enable the extension in your browser and you're all set!
 ---
-Chrome web store: https://chromewebstore.google.com/detail/pdkdjcijjkhhkfdfbdgdfdgobnliphjd                        
-Firefox addon: https://addons.mozilla.org/firefox/addon/chilltool-s
+* [Chrome WebStore](https://chromewebstore.google.com/detail/pdkdjcijjkhhkfdfbdgdfdgobnliphjd)
+* [Firefox Add-Ons](https://addons.mozilla.org/firefox/addon/chilltool-s)
 
 ## 🤝 Contributing
 
