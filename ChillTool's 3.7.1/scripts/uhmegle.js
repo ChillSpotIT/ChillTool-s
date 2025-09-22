@@ -6,7 +6,7 @@
     link.href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css";
     document.head.appendChild(link);
 
-    const CURRENT_VERSION = '3.7';
+    const CURRENT_VERSION = '3.7.1';
 
     if (window.location.href === 'https://uhmegle.com/' || window.location.href === 'https://uhmegle.com') {
         setTimeout(() => {
