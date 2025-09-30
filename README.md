@@ -1,5 +1,7 @@
 # ⚠️ DISCLAIMER
 
+**This Branch is used for the Desktop and Mobile developement APP**
+
 **Beware of imitations / use only the official ChillTool's release.**
 
 # 🌐 ChillTool's
