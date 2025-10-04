@@ -2,9 +2,12 @@
 
 **Beware of imitations / use only the official ChillTool's release.**
 --
-Disclaimer: This software is provided “as-is” for educational or personal use only. 
-The developers are not responsible for any misuse of the software. 
-All IP addresses displayed by the extension remain local to the client and are not collected or transmitted.
+Disclaimer:
+This software is provided “as-is” for educational and research purposes only.
+Users must obtain proper authorization, comply with all applicable privacy and data protection laws, and assume full responsibility for how they use this software.
+
+The developers are not liable for any illegal activities, privacy violations, or legal consequences arising from misuse.
+All IP information processed by the extension remains entirely local to the client and is never collected, stored, or transmitted externally.
 
 # 🌐 ChillTool's
 
