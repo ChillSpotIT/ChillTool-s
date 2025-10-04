@@ -1,6 +1,10 @@
 # ⚠️ DISCLAIMER
 
 **Beware of imitations / use only the official ChillTool's release.**
+--
+Notice: The IP address displayed is visible only on your browser. 
+It is not stored, logged, or transmitted to any server. 
+This information is for local use only.
 
 # 🌐 ChillTool's
 
