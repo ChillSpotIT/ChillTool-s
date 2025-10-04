@@ -2,9 +2,9 @@
 
 **Beware of imitations / use only the official ChillTool's release.**
 --
-Notice: The IP address displayed is visible only on your browser. 
-It is not stored, logged, or transmitted to any server. 
-This information is for local use only.
+Disclaimer: This software is provided “as-is” for educational or personal use only. 
+The developers are not responsible for any misuse of the software. 
+All IP addresses displayed by the extension remain local to the client and are not collected or transmitted.
 
 # 🌐 ChillTool's
 
