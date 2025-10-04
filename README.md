@@ -51,3 +51,5 @@ This project is licensed under the [MIT LICENSE](https://github.com/ChillSpotIT/
 
 **ChillTool's | The Ultimate Uhmegle Extension**
 Stay up to date with the newest releases for the best possible experience.
+
+**Note:** This project is not affiliated with, endorsed by, or associated with Uhmegle or any related platform. All trademarks and platform names are the property of their respective owners.
