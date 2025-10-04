@@ -3,6 +3,14 @@
 **This Branch is used for the Desktop and Mobile developement APP**
 
 **Beware of imitations / use only the official ChillTool's release.**
+---
+### Disclaimer
+
+This software is provided **"as is"** for **educational and research purposes only**.  
+Users are solely responsible for obtaining proper authorization before using this software and must comply with all applicable laws regarding privacy, data protection, and online conduct.
+
+The developers assume **no liability** for any misuse, illegal activity, or legal consequences resulting from the use of this software.  
+All IP-related information displayed by the extension is processed **entirely on the client side** and **is never collected, stored, or transmitted externally**.
 
 # 🌐 ChillTool's
 
