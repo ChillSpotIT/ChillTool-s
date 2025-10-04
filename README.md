@@ -2,12 +2,13 @@
 
 **Beware of imitations / use only the official ChillTool's release.**
 --
-Disclaimer:
-This software is provided “as-is” for educational and research purposes only.
-Users must obtain proper authorization, comply with all applicable privacy and data protection laws, and assume full responsibility for how they use this software.
+### Disclaimer
 
-The developers are not liable for any illegal activities, privacy violations, or legal consequences arising from misuse.
-All IP information processed by the extension remains entirely local to the client and is never collected, stored, or transmitted externally.
+This software is provided **"as is"** for **educational and research purposes only**.  
+Users are solely responsible for obtaining proper authorization before using this software and must comply with all applicable laws regarding privacy, data protection, and online conduct.
+
+The developers assume **no liability** for any misuse, illegal activity, or legal consequences resulting from the use of this software.  
+All IP-related information displayed by the extension is processed **entirely on the client side** and **is never collected, stored, or transmitted externally**.
 
 # 🌐 ChillTool's
 
