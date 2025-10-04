@@ -1,3 +1,20 @@
+/*
+===========================================
+  Project: ChillTool's
+  Autor: ChillSpot
+  License: MIT License + Common Clause
+  Repository: https://github.com/ChillSpotIT/chilltool-s/
+===========================================
+  DISCLAIMER:
+  This software is provided "as is" solely for educational and research purposes.  
+  The user is solely responsible for its use and must ensure they have obtained the necessary authorizations, in full compliance with all applicable laws on privacy, data protection, and cybersecurity.  
+  The developers assume no responsibility for any misuse, illegal activity, or legal consequences resulting from the use of this software.  
+  All IP or network-related information processed by the extension remains entirely on the user's device and **is never collected, stored, or transmitted externally**.  
+  This project is **not affiliated with, endorsed by, or associated** in any way with Uhmegle or related platforms.  
+  All trademarks mentioned belong to their respective owners.
+===========================================
+*/
+
 (function() {
     'use strict';
 
