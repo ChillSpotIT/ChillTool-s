@@ -12,11 +12,11 @@ All IP-related information displayed by the extension is processed **entirely on
 
 # 🌐 ChillTool's
 
-**ChillTool's** is a constantly evolving browser extension, designed to unlock powerful features and improvements for your Uhmegle experience. Here, you'll find the **latest and most stealth-optimized** versions, which may be harder to detect than those shared on our Discord server.
+**ChillTool's** is a constantly evolving browser extension, designed to unlock powerful features and improvements for your Uhmegle/Umingle experience. Here, you'll find the **latest and most stealth-optimized** versions, which may be harder to detect than those shared on our Discord server.
 
 ## ❓ What is ChillTool's?
 
-**ChillTool's** is a cutting-edge extension built to enhance Uhmegle with advanced functionalities, regular updates, and a smoother, more controlled user experience.
+**ChillTool's** is a cutting-edge extension built to enhance Uhmegle or Umingle with advanced functionalities, regular updates, and a smoother, more controlled user experience.
 
 ## 🚀 Versions
 
@@ -49,7 +49,7 @@ This project is licensed under the [MIT LICENSE](https://github.com/ChillSpotIT/
 
 ---
 
-**ChillTool's | The Ultimate Uhmegle Extension**
+**ChillTool's | The Ultimate Uhmegle/Umingle Extension**
 Stay up to date with the newest releases for the best possible experience.
 
-**Note:** This project is not affiliated with, endorsed by, or associated with Uhmegle or any related platform. All trademarks and platform names are the property of their respective owners.
+**Note:** This project is not affiliated with, endorsed by, or associated with Uhmegle/Umingle or any related platform. All trademarks and platform names are the property of their respective owners.
