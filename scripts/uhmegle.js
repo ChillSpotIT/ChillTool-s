@@ -10,7 +10,7 @@
     The user is solely responsible for its use and must ensure they have obtained the necessary authorizations, in full compliance with all applicable laws on privacy, data protection, and cybersecurity.  
     The developers assume no responsibility for any misuse, illegal activity, or legal consequences resulting from the use of this software.  
     All IP or network-related information processed by the extension remains entirely on the user's device and **is never collected, stored, or transmitted externally**.  
-    This project is **not affiliated with, endorsed by, or associated** in any way with Uhmegle or related platforms.  
+    This project is **not affiliated with, endorsed by, or associated** in any way with Uhmegle or Umingle or related platforms.  
     All trademarks mentioned belong to their respective owners.
     ===========================================
     */
@@ -63,7 +63,7 @@
         link.href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css";
         document.head.appendChild(link);
 
-        const CURRENT_VERSION = '3.8.7';
+        const CURRENT_VERSION = '3.8.8';
 
         const isUhmegle = window.location.hostname === 'uhmegle.com' || window.location.hostname === 'www.uhmegle.com';
         const isUmingle = window.location.hostname === 'umingle.com' || window.location.hostname === 'www.umingle.com';
@@ -473,6 +473,22 @@
             });
             leftButtons.appendChild(bannedListBtn);
 
+            const countryFilterBtn = document.createElement("button");
+            countryFilterBtn.id = "chillCountryFilterBtn";
+            countryFilterBtn.innerHTML = '<i class="fas fa-globe"></i>';
+            countryFilterBtn.style.background = "#17a2b8";
+            countryFilterBtn.style.color = "white";
+            countryFilterBtn.style.border = "none";
+            countryFilterBtn.style.borderRadius = isMobile() ? "8px" : "5px";
+            countryFilterBtn.style.padding = isMobile() ? "10px 12px" : "8px 12px";
+            countryFilterBtn.style.cursor = "pointer";
+            countryFilterBtn.style.fontSize = isMobile() ? "16px" : "inherit";
+            countryFilterBtn.title = translations[getLang()].countryFilter;
+            countryFilterBtn.addEventListener("click", function() {
+                showCountryFilterModal();
+            });
+            leftButtons.appendChild(countryFilterBtn);
+
             return toolbar;
         };
 
@@ -491,6 +507,13 @@
                 };
                 pressEsc();
                 setTimeout(pressEsc, 10);
+            }
+        }
+
+        function unblurToolbar() {
+            const toolbar = document.getElementById('chillToolbar');
+            if (toolbar) {
+                toolbar.classList.remove('chill-blur');
             }
         }
 
@@ -723,7 +746,12 @@
                 stylesSaved: 'Custom styles saved successfully!',
                 styleApplied: 'applied!',
                 omegle: 'Omegle Style',
-                pauseButton: 'Auto Skip'
+                pauseButton: 'Pause',
+                countryFilter: 'Country Filter',
+                countryFilterDesc: 'Select countries to connect with',
+                selectCountries: 'Select Countries',
+                noCountriesSelected: 'No countries selected - all countries allowed',
+                countriesSelected: 'countries selected'
             },
             zh: {
                 showIpDisplay: '显示IP',
@@ -777,7 +805,12 @@
                 stylesSaved: '自定义样式保存成功！',
                 styleApplied: '已应用！',
                 omegle: 'Omegle Style',
-                pauseButton: '自动跳过'
+                pauseButton: '暂停',
+                countryFilter: '国家过滤',
+                countryFilterDesc: '选择要连接的国家',
+                selectCountries: '选择国家',
+                noCountriesSelected: '未选择国家 - 允许所有国家',
+                countriesSelected: '个国家已选择'
             },
             hi: {
                 showIpDisplay: 'आईपी डिस्प्ले बॉक्स दिखाएं',
@@ -831,7 +864,12 @@
                 stylesSaved: 'कस्टम शैलियाँ सफलतापूर्वक सहेजी गईं!',
                 styleApplied: 'लागू किया गया!',
                 omegle: 'Omegle Style',
-                pauseButton: 'ऑटो स्किप'
+                pauseButton: 'रोकें',
+                countryFilter: 'देश फ़िल्टर',
+                countryFilterDesc: 'कनेक्ट करने के लिए देश चुनें',
+                selectCountries: 'देश चुनें',
+                noCountriesSelected: 'कोई देश नहीं चुना गया - सभी देश अनुमत',
+                countriesSelected: 'देश चुने गए'
             },
             es: {
                 showIpDisplay: 'Mostrar IP',
@@ -885,7 +923,12 @@
                 stylesSaved: '¡Estilos personalizados guardados con éxito!',
                 styleApplied: '¡aplicado!',
                 omegle: 'Omegle Style',
-                pauseButton: 'Salto automático'
+                pauseButton: 'Pausar',
+                countryFilter: 'Filtro de País',
+                countryFilterDesc: 'Selecciona países para conectar',
+                selectCountries: 'Seleccionar Países',
+                noCountriesSelected: 'Ningún país seleccionado - todos los países permitidos',
+                countriesSelected: 'países seleccionados'
             },
             ar: {
                 settings: 'الإعدادات',
@@ -939,7 +982,12 @@
                 stylesSaved: 'تم حفظ الأنماط المخصصة بنجاح!',
                 styleApplied: 'تم التطبيق!',
                 omegle: 'Omegle Style',
-                pauseButton: 'تخطي تلقائي'
+                pauseButton: 'إيقاف مؤقت',
+                countryFilter: 'تصفية البلد',
+                countryFilterDesc: 'حدد البلدان للاتصال بها',
+                selectCountries: 'اختر البلدان',
+                noCountriesSelected: 'لم يتم اختيار أي بلد - جميع البلدان مسموح بها',
+                countriesSelected: 'البلدان المحددة'
             },
             fr: {
                 settings: 'Paramètres',
@@ -993,7 +1041,12 @@
                 stylesSaved: 'Styles personnalisés enregistrés avec succès!',
                 styleApplied: 'appliqué!',
                 omegle: 'Omegle Style',
-                pauseButton: 'Saut automatique'
+                pauseButton: 'Pause',
+                countryFilter: 'Filtre de Pays',
+                countryFilterDesc: 'Sélectionnez les pays à connecter',
+                selectCountries: 'Sélectionner les Pays',
+                noCountriesSelected: 'Aucun pays sélectionné - tous les pays autorisés',
+                countriesSelected: 'pays sélectionnés'
             },
             bn: {
                 settings: 'সেটিংস',
@@ -1049,7 +1102,12 @@
                 stylesSaved: 'কাস্টম শৈলী সফলভাবে সংরক্ষিত হয়েছে!',
                 styleApplied: 'প্রয়োগ করা হয়েছে!',
                 omegle: 'Omegle Style',
-                pauseButton: 'অটো স্কিপ'
+                pauseButton: 'থামান',
+                countryFilter: 'দেশ ফিল্টার',
+                countryFilterDesc: 'সংযোগ করার জন্য দেশ নির্বাচন করুন',
+                selectCountries: 'দেশ নির্বাচন করুন',
+                noCountriesSelected: 'কোনো দেশ নির্বাচন করা হয়নি - সব দেশ অনুমোদিত',
+                countriesSelected: 'দেশ নির্বাচিত'
             },
 
             ru: {
@@ -1106,7 +1164,12 @@
                 stylesSaved: 'Пользовательские стили успешно сохранены!',
                 styleApplied: 'применено!',
                 omegle: 'Omegle Style',
-                pauseButton: 'Авто-пропуск'
+                pauseButton: 'Пауза',
+                countryFilter: 'Фильтр стран',
+                countryFilterDesc: 'Выберите страны для подключения',
+                selectCountries: 'Выбрать страны',
+                noCountriesSelected: 'Страны не выбраны - все страны разрешены',
+                countriesSelected: 'стран выбрано'
             },
             pt: {
                 settings: 'Configurações',
@@ -1162,7 +1225,12 @@
                 stylesSaved: 'Estilos personalizados salvos com sucesso!',
                 styleApplied: 'aplicado!',
                 omegle: 'Omegle Style',
-                pauseButton: 'Pular automático'
+                pauseButton: 'Pause',
+                countryFilter: 'Filtro de País',
+                countryFilterDesc: 'Selecione países para conectar',
+                selectCountries: 'Selecionar Países',
+                noCountriesSelected: 'Nenhum país selecionado - todos os países permitidos',
+                countriesSelected: 'países selecionados'
             },
             id: {
                 settings: 'Pengaturan',
@@ -1218,7 +1286,12 @@
                 stylesSaved: 'Gaya kustom berhasil disimpan!',
                 styleApplied: 'diterapkan!',
                 omegle: 'Omegle Style',
-                pauseButton: 'Lewati otomatis'
+                pauseButton: 'Jeda',
+                countryFilter: 'Filter Negara',
+                countryFilterDesc: 'Pilih negara untuk terhubung',
+                selectCountries: 'Pilih Negara',
+                noCountriesSelected: 'Tidak ada negara yang dipilih - semua negara diizinkan',
+                countriesSelected: 'negara dipilih'
             },
             it: {
                 settings: 'Impostazioni',
@@ -1272,7 +1345,12 @@
                 stylesSaved: 'Stili personalizzati salvati con successo!',
                 styleApplied: 'applicato!',
                 omegle: 'Omegle Style',
-                pauseButton: 'Pausa'
+                pauseButton: 'Pausa',
+                countryFilter: 'Filtro Paese',
+                countryFilterDesc: 'Seleziona i paesi con cui connetterti',
+                selectCountries: 'Seleziona Paesi',
+                noCountriesSelected: 'Nessun paese selezionato - tutti i paesi consentiti',
+                countriesSelected: 'paesi selezionati'
             }
         };
 
@@ -1359,6 +1437,9 @@
             
             const pauseBtn = document.getElementById('chillPauseBtn');
             if (pauseBtn) pauseBtn.title = t.pauseButton;
+            
+            const countryFilterBtn = document.getElementById('chillCountryFilterBtn');
+            if (countryFilterBtn) countryFilterBtn.title = t.countryFilter;
         }
         
         function getBannedUsers() {
@@ -1444,6 +1525,191 @@
                     document.getElementById('bannedUsersModal').remove();
                     displayBannedUsers();
                 });
+            });
+        }
+
+        function getSelectedCountries() {
+            const saved = localStorage.getItem('chilltool_selectedCountries');
+            return saved ? JSON.parse(saved) : [];
+        }
+
+        function saveSelectedCountries(countries) {
+            localStorage.setItem('chilltool_selectedCountries', JSON.stringify(countries));
+        }
+
+        function showCountryFilterModal() {
+            const toolbar = document.getElementById('chillToolbar');
+            if (toolbar && !isMobile()) toolbar.classList.add('chill-blur');
+            const lang = getLang();
+            const t = translations[lang];
+            const selectedCountries = getSelectedCountries();
+
+            const countries = [
+                'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 
+                'Armenia', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 
+                'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 
+                'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cambodia', 'Cameroon', 'Canada', 
+                'Cape Verde', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo', 
+                'Costa Rica', 'Croatia', 'Cuba', 'Cyprus', 'Czech Republic', 'Denmark', 'Djibouti', 'Dominica', 
+                'Dominican Republic', 'East Timor', 'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 
+                'Eritrea', 'Eswatini', 'Estonia', 'Ethiopia', 'Fiji', 'Finland', 'France', 'Gabon', 'Gambia', 
+                'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau', 
+                'Guyana', 'Haiti', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 
+                'Ireland', 'Israel', 'Italy', 'Ivory Coast', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 
+                'Kiribati', 'North Korea', 'South Korea', 'Kosovo', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 
+                'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Macedonia', 
+                'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 
+                'Mauritius', 'Mexico', 'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 
+                'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Zealand', 'Nicaragua', 
+                'Niger', 'Nigeria', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Palestine', 'Panama', 'Papua New Guinea', 
+                'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Qatar', 'Romania', 'Russia', 'Rwanda', 
+                'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 
+                'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 
+                'Singapore', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa', 'South Sudan', 
+                'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syria', 'Taiwan', 'Tajikistan', 
+                'Tanzania', 'Thailand', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 
+                'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 
+                'Uzbekistan', 'Vanuatu', 'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe'
+            ];
+
+            const countryCheckboxes = countries.map(country => {
+                const isChecked = selectedCountries.includes(country);
+                return `
+                    <label style="display: flex; align-items: center; padding: 8px; margin: 4px 0; background: ${isChecked ? 'rgba(23, 162, 184, 0.2)' : 'rgba(255,255,255,0.05)'}; border-radius: 5px; cursor: pointer; transition: background 0.2s;">
+                        <input type="checkbox" value="${country}" ${isChecked ? 'checked' : ''} style="margin-right: 10px; cursor: pointer; width: 18px; height: 18px;">
+                        <span style="color: #fff; font-size: 14px;">${country}</span>
+                    </label>
+                `;
+            }).join('');
+
+            const modalHTML = `
+            <div id="countryFilterModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(5px); z-index: 9999; display: flex; justify-content: center; align-items: center;">
+                <div style="background: #111; border-radius: 10px; width: 90%; max-width: 600px; max-height: 80vh; overflow: hidden; box-shadow: 0 5px 25px rgba(0,0,0,0.7); border: 1px solid #333; display: flex; flex-direction: column;">
+                    <div style="padding: 15px; background: linear-gradient(to right, #17a2b8, #138496); color: white; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
+                        <h3 style="margin: 0; font-size: 18px; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
+                            <i class="fas fa-globe"></i> ${t.countryFilter}
+                        </h3>
+                        <button id="closeCountryFilter" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 0 10px;">×</button>
+                    </div>
+                    <div style="padding: 15px; color: #bbb; font-size: 13px; border-bottom: 1px solid #333;">
+                        ${t.countryFilterDesc}
+                    </div>
+                    <div style="padding: 15px; border-bottom: 1px solid #333;">
+                        <div style="position: relative;">
+                            <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #888; font-size: 14px;"></i>
+                            <input type="text" id="countrySearchInput" placeholder="Search countries..." style="width: 100%; padding: 10px 10px 10px 38px; background: #222; border: 1px solid #444; border-radius: 5px; color: white; font-size: 14px; outline: none;">
+                        </div>
+                    </div>
+                    <div style="padding: 15px; overflow-y: auto; flex-grow: 1; min-height: 200px; max-height: 400px;">
+                        <div style="margin-bottom: 10px; display: flex; gap: 10px;">
+                            <button id="selectAllCountries" style="flex: 1; background: #28a745; color: white; border: none; padding: 8px; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                                <i class="fas fa-check-double"></i> Select All
+                            </button>
+                            <button id="deselectAllCountries" style="flex: 1; background: #dc3545; color: white; border: none; padding: 8px; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                                <i class="fas fa-times"></i> Deselect All
+                            </button>
+                        </div>
+                        <div id="countryCheckboxContainer">
+                            ${countryCheckboxes}
+                        </div>
+                        <div id="noResultsMessage" style="display: none; text-align: center; padding: 40px 20px; color: #666; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
+                            <i class="fas fa-search" style="font-size: 48px; opacity: 0.3; margin-bottom: 15px;"></i>
+                            <p style="margin: 0; font-size: 16px;">No countries found</p>
+                        </div>
+                    </div>
+                    <div style="padding: 15px; background: #1a1a1a; border-top: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+                        <span id="selectedCountryCount" style="color: #bbb; font-size: 13px;">
+                            ${selectedCountries.length > 0 ? `${selectedCountries.length} ${t.countriesSelected}` : t.noCountriesSelected}
+                        </span>
+                        <button id="saveCountryFilter" style="background: #17a2b8; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                            ${t.save || 'Save'}
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            const modal = document.getElementById('countryFilterModal');
+            const checkboxes = modal.querySelectorAll('input[type="checkbox"]');
+            const countLabel = document.getElementById('selectedCountryCount');
+            const searchInput = document.getElementById('countrySearchInput');
+            const countryContainer = document.getElementById('countryCheckboxContainer');
+            const noResultsMsg = document.getElementById('noResultsMessage');
+
+            function updateCount() {
+                const checked = Array.from(checkboxes).filter(cb => cb.checked);
+                countLabel.innerHTML = `<i class="fas fa-flag" style="color: #17a2b8; font-size: 16px; margin-right: 8px;"></i>${checked.length > 0 ? `${checked.length} ${t.countriesSelected}` : t.noCountriesSelected}`;
+                
+                checkboxes.forEach(cb => {
+                    const label = cb.closest('label');
+                    if (cb.checked) {
+                        label.style.background = 'rgba(23, 162, 184, 0.3)';
+                        label.style.borderLeft = '3px solid #17a2b8';
+                    } else {
+                        label.style.background = 'rgba(255,255,255,0.05)';
+                        label.style.borderLeft = '3px solid transparent';
+                    }
+                });
+            }
+
+            function filterCountries() {
+                const searchTerm = searchInput.value.toLowerCase().trim();
+                let visibleCount = 0;
+
+                checkboxes.forEach(cb => {
+                    const label = cb.closest('label');
+                    const countryName = cb.value.toLowerCase();
+                    
+                    if (countryName.includes(searchTerm)) {
+                        label.style.display = 'flex';
+                        visibleCount++;
+                    } else {
+                        label.style.display = 'none';
+                    }
+                });
+
+                if (visibleCount === 0) {
+                    noResultsMsg.style.display = 'block';
+                    countryContainer.style.display = 'none';
+                } else {
+                    noResultsMsg.style.display = 'none';
+                    countryContainer.style.display = 'grid';
+                }
+            }
+
+            searchInput.addEventListener('input', filterCountries);
+
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', updateCount);
+            });
+
+            document.getElementById('selectAllCountries').addEventListener('click', () => {
+                checkboxes.forEach(cb => cb.checked = true);
+                updateCount();
+            });
+
+            document.getElementById('deselectAllCountries').addEventListener('click', () => {
+                checkboxes.forEach(cb => cb.checked = false);
+                updateCount();
+            });
+
+            document.getElementById('closeCountryFilter').addEventListener('click', () => {
+                modal.remove();
+                unblurToolbar();
+            });
+
+            document.getElementById('saveCountryFilter').addEventListener('click', () => {
+                const selected = Array.from(checkboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.value);
+                saveSelectedCountries(selected);
+                showNotification('Country Filter', `${selected.length > 0 ? selected.length + ' ' + t.countriesSelected : t.noCountriesSelected}`, {
+                    type: 'success',
+                    duration: 3000
+                });
+                modal.remove();
+                unblurToolbar();
             });
         }
 
@@ -1603,6 +1869,25 @@
                             ">
                                 <i class="fas fa-file-alt"></i> ${t.termsOfService || 'Terms of Service'}
                             </button>
+                            <a href="https://discord.gg/FBsPkXDche" target="_blank" style="
+                                flex: 1;
+                                background: #5865F2;
+                                color: white;
+                                border: none;
+                                padding: 10px 15px;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                font-size: 14px;
+                                transition: all 0.2s;
+                                text-align: center;
+                                text-decoration: none;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                gap: 8px;
+                            ">
+                                <i class="fab fa-discord"></i> Discord
+                            </a>
                         </div>
                     </div>
                     <div style="padding: 12px; background: #222; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #333; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
@@ -2052,6 +2337,11 @@
                         border-bottom: 1px solid #ff4444 !important;
                     }
 
+                    #countryFilterModal > div > div:first-child {
+                        background: linear-gradient(to right, #ff4444, #ff2222) !important;
+                        border-bottom: 1px solid #ff4444 !important;
+                    }
+
                     #userStylesModal > div > div:first-child h3 {
                         color: white !important;
                         text-shadow: -1px -1px 0 #000,
@@ -2459,7 +2749,7 @@
         const modalObserver = new MutationObserver(() => {
             if (isMobile()) return; 
             
-            const modals = document.querySelectorAll('#settingsModal, #tosModal, #historyModal, #screenshotModal, #infoModal, #bannedUsersModal, #userStylesModal, #galleryModal');
+            const modals = document.querySelectorAll('#settingsModal, #tosModal, #historyModal, #screenshotModal, #infoModal, #bannedUsersModal, #userStylesModal, #galleryModal, #countryFilterModal');
             const toolbar = document.getElementById('chillToolbar');
             const logo = document.getElementById('chillLogo');
             
@@ -2662,6 +2952,55 @@
                 childList: true,
                 subtree: true
             });
+            
+            setTimeout(() => {
+                const selectedCountries = getSelectedCountries();
+                if (selectedCountries.length > 0) {
+                    let partnerCountry = null;
+                    const countryNameDiv = document.getElementById('countryName');
+                    if (countryNameDiv && countryNameDiv.textContent) {
+                        partnerCountry = countryNameDiv.textContent.trim();
+                    }
+                    
+                    let countryMatch = selectedCountries.includes(partnerCountry);
+                    if (!countryMatch && (partnerCountry === 'Eswatini' || partnerCountry === 'Swaziland')) {
+                        countryMatch = selectedCountries.includes('Eswatini') || selectedCountries.includes('Swaziland');
+                    }
+                    
+                    if (partnerCountry && !countryMatch) {
+                        console.log(`Country ${partnerCountry} not in filter. Skipping...`);
+                        
+                        document.dispatchEvent(new KeyboardEvent('keydown', { 
+                            key: 'Escape', 
+                            code: 'Escape', 
+                            keyCode: 27, 
+                            which: 27, 
+                            bubbles: true 
+                        }));
+                        
+                        // Check if auto-skipping is not paused
+                        const pauseBtn = document.querySelector('.chill-btn.pause-skip');
+                        if (!pauseBtn || !pauseBtn.classList.contains('active')) {
+                            setTimeout(() => {
+                                // Check again if still not paused when the timeout triggers
+                                if (!pauseBtn || !pauseBtn.classList.contains('active')) {
+                                    document.dispatchEvent(new KeyboardEvent('keydown', { 
+                                        key: 'Escape', 
+                                        code: 'Escape', 
+                                        keyCode: 27, 
+                                        which: 27, 
+                                        bubbles: true 
+                                    }));
+                                }
+                            }, 300);
+                        }
+                    } else if (partnerCountry) {
+                        console.log(`Country ${partnerCountry} is in filter. Accepting connection.`);
+                    }
+                } else {
+                    console.log('Country filter disabled - accepting all countries');
+                }
+            }, 369);
         }
 
         function captureAndStoreScreenshot(videoElement, ip) {
@@ -2920,7 +3259,7 @@
             logo.addEventListener("click", () => window.open("https://chilltools.it", "_blank"));
         };
 
-        const replaceLogo = () => {
+const replaceLogo = () => {
             const logoBlock = document.querySelector('.logoBlock');
             if (logoBlock) {
                 logoBlock.outerHTML = `
