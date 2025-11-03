@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "ChillTool's | for uhmegle/umingle",
-  "description": "Extension for uhmegle and umingle",
+  "name": "ChillTool's | IP lookup and more for uhmegle / umingle",
+  "description": "Extension for uhmegle and umingle that enhances your privacy and adds cool features, like ip lookup!",
   "version": "3.8.9",
   "icons": {
     "16": "logo/chilltools_16.png",
