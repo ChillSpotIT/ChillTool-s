@@ -29,13 +29,9 @@ The versions available here are the **most recent builds**, featuring:
 
 ## 🔧 Installation
 
-1. Download the latest version of ChillTool's from this page.
-2. Follow the installation steps provided in our [Discord community](https://discord.gg/FBsPkXDche).
-3. Enable the extension in your browser and you're all set!
----
 * [Chrome WebStore](https://chromewebstore.google.com/detail/pdkdjcijjkhhkfdfbdgdfdgobnliphjd)
 * [Firefox Add-Ons](https://addons.mozilla.org/firefox/addon/chilltool-s)
-
+* or if you want to manual setup it you go to your extensions, enable developer mode, unzip and move the file on the extensions page, and you have it
 ## 🤝 Contributing
 
 Want to help improve ChillTool's?
