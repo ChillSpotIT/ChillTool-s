@@ -73,7 +73,7 @@
         link.href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css";
         document.head.appendChild(link);
 
-        const CURRENT_VERSION = '3.8.96';
+        const CURRENT_VERSION = '3.8.97';
 
         function getPeopleCount() {
             return parseInt(localStorage.getItem('peopleCount') || '0');
@@ -3682,18 +3682,79 @@
                     e.stopPropagation();
                     e.preventDefault();
                     
-                    const link = document.createElement('a');
-                    link.href = screenshot;
-                    
-                    const randomId = Math.floor(1000000000 + Math.random() * 9000000000);
-                    const fileName = `chilltools_${entry.ip}_${randomId}.png`;
-                    
-                    link.download = fileName;
-                    link.setAttribute('data-author', "chilltool's");
-                    
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        
+                        ctx.drawImage(img, 0, 0);
+                        
+                        const logoUrl = isUmingle ? 'https://i.ibb.co/xS4xFRrS/Frame.png' : 'https://i.ibb.co/KcvKXzxK/logo.png';
+                        const chilltoolsLogoUrl = 'https://i.ibb.co/5XX8Z98Z/chilltools-128.png';
+                        
+                        let logosProcessed = 0;
+                        const processLogos = () => {
+                            logosProcessed++;
+                            if (logosProcessed === 2) {
+                                canvas.toBlob(function(blob) {
+                                    const url = URL.createObjectURL(blob);
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    
+                                    const randomId = Math.floor(1000000000 + Math.random() * 9000000000);
+                                    const fileName = `chilltools_${entry.ip}_${randomId}.png`;
+                                    
+                                    link.download = fileName;
+                                    link.setAttribute('data-author', "chilltool's");
+                                    
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                    
+                                    URL.revokeObjectURL(url);
+                                }, 'image/png');
+                            }
+                        };
+                        
+                        const logo = new Image();
+                        logo.crossOrigin = 'anonymous';
+                        logo.onload = function() {
+                            try {
+                                const logoWidth = Math.min(img.width * 0.35, 180);
+                                const logoHeight = (logoWidth / logo.width) * logo.height;
+                                const logoX = 10;
+                                const logoY = img.height - logoHeight - 10;
+                                ctx.globalAlpha = 0.6;
+                                ctx.drawImage(logo, logoX, logoY, logoWidth, logoHeight);
+                                ctx.globalAlpha = 1.0;
+                            } catch(e) { console.log('Logo draw failed'); }
+                            processLogos();
+                        };
+                        logo.onerror = processLogos;
+                        logo.src = logoUrl;
+                        
+                        const chilltoolsLogo = new Image();
+                        chilltoolsLogo.crossOrigin = 'anonymous';
+                        chilltoolsLogo.onload = function() {
+                            try {
+                                const chillLogoWidth = Math.min(img.width * 0.08, 50);
+                                const chillLogoHeight = (chillLogoWidth / chilltoolsLogo.width) * chilltoolsLogo.height;
+                                const chillLogoX = img.width - chillLogoWidth - 10;
+                                const chillLogoY = img.height - chillLogoHeight - 10;
+                                ctx.globalAlpha = 0.6;
+                                ctx.drawImage(chilltoolsLogo, chillLogoX, chillLogoY, chillLogoWidth, chillLogoHeight);
+                                ctx.globalAlpha = 1.0;
+                            } catch(e) { console.log('ChillTools logo draw failed'); }
+                            processLogos();
+                        };
+                        chilltoolsLogo.onerror = processLogos;
+                        chilltoolsLogo.src = chilltoolsLogoUrl;
+                    };
+                    img.crossOrigin = 'anonymous';
+                    img.src = screenshot;
                 });
             }
         }
