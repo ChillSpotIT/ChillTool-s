@@ -73,7 +73,7 @@
         link.href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css";
         document.head.appendChild(link);
 
-        const CURRENT_VERSION = '3.8.97';
+        const CURRENT_VERSION = '3.8.98';
 
         function getPeopleCount() {
             return parseInt(localStorage.getItem('peopleCount') || '0');
@@ -876,6 +876,7 @@
                 showIp: 'Show IP',
                 showIpTooltip: 'Show/hide IP box',
                 statistics: 'Statistics',
+                donate: 'Donate',
                 statisticsTitle: 'Usage Statistics',
                 totalTimeSpent: 'Total Time Spent',
                 peopleEncountered: 'People Encountered',
@@ -949,6 +950,7 @@
                 showIp: '显示IP',
                 showIpTooltip: '显示/隐藏IP框',
                 statistics: '统计',
+                donate: '捐赠',
                 statisticsTitle: '使用统计',
                 totalTimeSpent: '总使用时间',
                 peopleEncountered: '遇到的人',
@@ -1022,6 +1024,7 @@
                 showIp: 'आईपी दिखाएं',
                 showIpTooltip: 'आईपी बॉक्स दिखाएं/छुपाएं',
                 statistics: 'आंकड़े',
+                donate: 'दान करें',
                 statisticsTitle: 'उपयोग आंकड़े',
                 totalTimeSpent: 'कुल बिताया समय',
                 peopleEncountered: 'मिले लोग',
@@ -1100,6 +1103,7 @@
                 showIp: 'Mostrar IP',
                 showIpTooltip: 'Mostrar/ocultar el cuadro de IP',
                 statistics: 'Estadísticas',
+                donate: 'Donar',
                 statisticsTitle: 'Estadísticas de Uso',
                 totalTimeSpent: 'Tiempo Total Transcurrido',
                 peopleEncountered: 'Personas Encontradas',
@@ -1173,6 +1177,7 @@
                 showIp: 'عرض IP',
                 showIpTooltip: 'إظهار/إخفاء مربع IP',
                 statistics: 'إحصائيات',
+                donate: 'تبرع',
                 statisticsTitle: 'إحصائيات الاستخدام',
                 totalTimeSpent: 'إجمالي الوقت المستغرق',
                 peopleEncountered: 'الأشخاص الذين قابلتهم',
@@ -1246,6 +1251,7 @@
                 showIp: 'Afficher IP',
                 showIpTooltip: 'Afficher/masquer la boîte IP',
                 statistics: 'Statistiques',
+                donate: 'Faire un don',
                 statisticsTitle: 'Statistiques d\'Utilisation',
                 totalTimeSpent: 'Temps Total Passé',
                 peopleEncountered: 'Personnes Rencontrées',
@@ -1264,6 +1270,7 @@
                 language: 'ভাষা:',
                 showIpDisplay: 'IP দেখানো',
                 statistics: 'পরিসংখ্যান',
+                donate: 'দান করুন',
                 statisticsTitle: 'ব্যবহার পরিসংখ্যান',
                 totalTimeSpent: 'মোট অতিবাহিত সময়',
                 peopleEncountered: 'লোকের সাথে দেখা হয়েছে',
@@ -1327,6 +1334,7 @@
                 showIpTooltip: 'আইপি বক্স দেখান/লুকান',
                 statisticsTitle: 'ব্যবহার পরিসংখ্যান',
                 statistics: 'পরিসংখ্যান',
+                donate: 'দান করুন',
                 totalTimeSpent: 'মোট অতিবাহিত সময়',
                 peopleEncountered: 'লোকের সাথে দেখা হয়েছে',
                 skips: 'স্কিপ',
@@ -1403,6 +1411,7 @@
                 showIpTooltip: 'Показать/скрыть поле IP',
                 statisticsTitle: 'Статистика использования',
                 statistics: 'Статистика',
+                donate: 'Пожертвовать',
                 totalTimeSpent: 'Общее время',
                 peopleEncountered: 'Люди встречены',
                 skips: 'Пропуски',
@@ -1471,6 +1480,7 @@
                 noCountriesSelected: 'Nenhum país selecionado - todos os países permitidos',
                 statisticsTitle: 'Estatísticas de Uso',
                 statistics: 'Estatísticas',
+                donate: 'Doar',
                 totalTimeSpent: 'Tempo Total Gasto',
                 peopleEncountered: 'Pessoas Encontradas',
                 skips: 'Pulos',
@@ -1552,6 +1562,7 @@
                 showIp: 'Tampilkan IP',
                 showIpTooltip: 'Tampilkan/sembunyikan bidang IP',
                 statistics: 'Statistik',
+                donate: 'Donasi',
                 statisticsTitle: 'Statistik Penggunaan',
                 totalTimeSpent: 'Total Waktu Digunakan',
                 skips: 'Lewati',
@@ -1627,6 +1638,7 @@
                 showIp: 'Mostra IP',
                 showIpTooltip: 'Mostra/nascondi riquadro IP',
                 statistics: 'Statistiche',
+                donate: 'Donazioni',
                 statisticsTitle: 'Statistiche di Utilizzo',
                 totalTimeSpent: 'Tempo Totale Trascorso',
                 peopleEncountered: 'Persone Incontrate',
@@ -2301,26 +2313,49 @@
                             </a>
                         </div>
                         
-                        <button id="showStatisticsBtn" style="
-                            width: 100%;
-                            padding: 12px 15px;
-                            background: #ad6721;
-                            color: white;
-                            border: none;
-                            border-radius: 8px;
-                            cursor: pointer;
-                            font-size: 14px;
-                            font-weight: 600;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            gap: 8px;
-                            transition: all 0.2s;
-                            margin-top: 10px;
-                        ">
-                            <i class="fas fa-chart-bar"></i>
-                            ${t.statistics}
-                        </button>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <a href="https://buymeacoffee.com/chillspotinc" target="_blank" id="donateBtn" style="
+                                flex: 1;
+                                padding: 12px 15px;
+                                background: #ff6b35;
+                                color: white;
+                                border: none;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                font-size: 14px;
+                                font-weight: 600;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                gap: 8px;
+                                transition: all 0.2s;
+                                text-align: center;
+                                text-decoration: none;
+                            ">
+                                <i class="fas fa-heart"></i>
+                                ${t.donate}
+                            </a>
+                            
+                            <button id="showStatisticsBtn" style="
+                                flex: 1;
+                                padding: 12px 15px;
+                                background: #ad6721;
+                                color: white;
+                                border: none;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                font-size: 14px;
+                                font-weight: 600;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                gap: 8px;
+                                transition: all 0.2s;
+                            ">
+                                <i class="fas fa-chart-bar"></i>
+                                ${t.statistics}
+                            </button>
+                        </div>
                     </div>
                     <div style="padding: 12px; background: #222; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #333; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
                         chilltools.it
@@ -3693,7 +3728,7 @@
                         ctx.drawImage(img, 0, 0);
                         
                         const logoUrl = isUmingle ? 'https://i.ibb.co/xS4xFRrS/Frame.png' : 'https://i.ibb.co/KcvKXzxK/logo.png';
-                        const chilltoolsLogoUrl = 'https://i.ibb.co/5XX8Z98Z/chilltools-128.png';
+                        const chilltoolsLogoUrl = 'https://i.ibb.co/zTS0gP0G/logo-chilltools.png';
                         
                         let logosProcessed = 0;
                         const processLogos = () => {
