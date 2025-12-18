@@ -29,7 +29,7 @@ The versions available here are the **most recent builds**, featuring:
 
 ## 🔧 Installation
 
-* [Chrome WebStore](https://chromewebstore.google.com/detail/pdkdjcijjkhhkfdfbdgdfdgobnliphjd)
+* [Chrome WebStore](https://chromewebstore.google.com/detail/chilltools-ip-lookup-and/pdkdjcijjkhhkfdfbdgdfdgobnliphjd?utm_source=github_original)
 * [Firefox Add-Ons](https://addons.mozilla.org/firefox/addon/chilltool-s)
 * or if you want to manual setup it you go to your extensions, enable developer mode, unzip and move the file on the extensions page, and you have it
 ## 🤝 Contributing
