@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "ChillTool's | IP lookup for umingle",
+  "description": "ip lookup and more!",
+  "version": "3.8.99",
+  "icons": {
+    "16": "logo/chilltools_16.png",
+    "48": "logo/chilltools_48.png",
+    "128": "logo/chilltools_128.png"
+  },
+  "permissions": [
+    "https://uhmegle.com/*",
+    "https://umingle.com/*"
+  ],
+  "background": {
+    "scripts": ["scripts/uhmegle.js"],
+    "persistent": false
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://uhmegle.com/*",
+        "https://umingle.com/*"
+      ],
+      "js": ["inject.js"]
+    }
+  ],
+  "web_accessible_resources": [{
+    "resources": ["scripts/uhmegle.js"],
+    "matches": ["https://uhmegle.com/*", "https://umingle.com/*"]
+  }],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "info@chilltools.it"
+    }
+  }
+}
