@@ -12,7 +12,7 @@ All IP-related information displayed by the extension is processed **entirely on
 
 # 🌐 ChillTool's
 
-**ChillTool's** is a constantly evolving browser extension, designed to unlock powerful features and improvements for your Uhmegle/Umingle experience.
+**ChillTool's** is a constantly evolving browser extension, designed to unlock powerful features and improvements for your Umingle experience.
 ## ❓ What is ChillTool's?
 
 **ChillTool's** is a cutting-edge extension built to enhance Uhmegle or Umingle with advanced functionalities, regular updates, and a smoother, more controlled user experience.
