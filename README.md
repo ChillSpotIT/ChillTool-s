@@ -21,9 +21,9 @@ All IP-related information displayed by the extension is processed **entirely on
 
 The versions available here are the **most recent builds**, featuring:
 
-* Bug fixes
-* Performance optimizations
-* New features
+* Bug fixes.
+* Performance optimizations.
+* New features.
   Compared to those on our Discord server, these versions may offer **better stealth and detection resistance**.
 
 ## 🔧 Installation
