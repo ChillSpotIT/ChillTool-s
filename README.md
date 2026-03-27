@@ -42,6 +42,12 @@ This project is licensed under the [MIT LICENSE](https://github.com/ChillSpotIT/
 
 **Important:** Redistribution for commercial purposes or reselling of this project is **strictly prohibited**. You may use, modify, and share it for personal or non-commercial purposes only.
 
+## Contributors
+
+<a href="https://github.com/chillspotit/chilltool-s/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=chillspotit/chilltool-s" />
+</a>
+
 ---
 
 **ChillTool's | The Ultimate Uhmegle/Umingle Extension**
