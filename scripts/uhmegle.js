@@ -2,7 +2,7 @@
     ===========================================
     Project: ChillTool's
     Autor: ChillSpot
-    License: MIT License + Common Clause
+    License: MIT License + Common Clause + Additional Restrictions
     Repository: https://github.com/ChillSpotIT/chilltool-s/
     ===========================================
     DISCLAIMER:
@@ -17,6 +17,16 @@
 
     (function() {
         'use strict';
+
+        let isSaveButtonChoiceEnabled = localStorage.getItem('saveButtonChoice') === 'true';
+        let isIpDisplayEnabled = true;
+        
+        if (isSaveButtonChoiceEnabled) {
+            const savedIpDisplay = localStorage.getItem('ipDisplayEnabled');
+            if (savedIpDisplay !== null) {
+                isIpDisplayEnabled = savedIpDisplay === 'true';
+            }
+        }
 
         function getCookie(name) {
             const nameEQ = name + '=';
@@ -61,13 +71,303 @@
         const link = document.createElement("link");
         link.rel = "stylesheet";
         link.href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css";
+        link.onload = function() {
+            console.log('FontAwesome loaded successfully');
+        };
+        link.onerror = function() {
+            console.error('Failed to load FontAwesome from CDN');
+            const fallbackLink = document.createElement("link");
+            fallbackLink.rel = "stylesheet";
+            fallbackLink.href = "https://stackpath.bootstrapcdn.com/font-awesome/5.15.4/css/all.min.css";
+            document.head.appendChild(fallbackLink);
+        };
         document.head.appendChild(link);
 
-        const CURRENT_VERSION = '3.8.8';
+        const CURRENT_VERSION = '3.9.6.2';
+
+        const COUNTRY_LEADERBOARD_STORAGE_KEY = 'countryLeaderboardCounts';
+        let lastCountryCountedIP = null;
+        let currentStreakCountry = null;
+        let currentStreakCount = 0;
+
+        function safeJsonParse(value, fallback) {
+            try {
+                if (value == null) return fallback;
+                return JSON.parse(value);
+            } catch (_) {
+                return fallback;
+            }
+        }
+
+        function normalizeCountryKey(countryName) {
+            if (!countryName) return null;
+            const s = String(countryName).trim();
+            if (!s) return null;
+            return s;
+        }
+
+        function getCountryCounts() {
+            const raw = localStorage.getItem(COUNTRY_LEADERBOARD_STORAGE_KEY);
+            const parsed = safeJsonParse(raw, {});
+            if (!parsed || typeof parsed !== 'object') return {};
+            return parsed;
+        }
+
+        function setCountryCounts(counts) {
+            if (!counts || typeof counts !== 'object') return;
+            localStorage.setItem(COUNTRY_LEADERBOARD_STORAGE_KEY, JSON.stringify(counts));
+        }
+
+        function incrementCountryCount(countryName) {
+            const key = normalizeCountryKey(countryName);
+            if (!key) return;
+            const counts = getCountryCounts();
+            const current = parseInt(counts[key] || '0', 10) || 0;
+            counts[key] = current + 1;
+            setCountryCounts(counts);
+        }
+
+        function getPartnerCountryFromDom() {
+            try {
+                const el = document.getElementById('countryName');
+                if (!el) return null;
+                const name = (el.textContent || '').trim();
+                return name || null;
+            } catch (_) {
+                return null;
+            }
+        }
+
+        function incrementLeaderboardForCurrentPartner(ip, fallbackCountryName) {
+            if (!ip) return;
+            if (lastCountryCountedIP === ip) return;
+
+            const fromDom = getPartnerCountryFromDom();
+            const countryToUse = fromDom || fallbackCountryName;
+            if (!countryToUse) return;
+
+            incrementCountryCount(countryToUse);
+            lastCountryCountedIP = ip;
+        }
+function updateCountryStreak(country) {
+    if (!country || country === 'N/A') return;
+    if (country === currentStreakCountry) {
+        currentStreakCount++;
+    } else {
+        currentStreakCountry = country;
+        currentStreakCount = 1;
+    }
+}
+
+function getStreakBadgeHtml() {
+    if (currentStreakCount < 3) return '';
+    const emoji = currentStreakCount >= 10 ? '🔥' : currentStreakCount >= 5 ? '⚡' : '🔁';
+    return `<span style="
+        display: inline-block;
+        margin-left: 8px;
+        background: linear-gradient(to right, #f7971e, #ffd200);
+        color: #000;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 2px 7px;
+        border-radius: 10px;
+        vertical-align: middle;
+        text-shadow: none;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    ">${emoji} x${currentStreakCount}</span>`;
+}
+        function getSortedCountryLeaderboard() {
+            const counts = getCountryCounts();
+            const entries = Object.entries(counts)
+                .map(([country, count]) => ({ country, count: parseInt(count, 10) || 0 }))
+                .filter(e => e.country && e.count > 0)
+                .sort((a, b) => b.count - a.count || a.country.localeCompare(b.country));
+
+            const total = entries.reduce((sum, e) => sum + e.count, 0);
+            return { entries, total };
+        }
+
+function showCountryLeaderboard() {
+    const lang = getLang();
+    const t = translations[lang] || translations['en'];
+    const tEn = translations['en'] || {};
+
+    const existing = document.getElementById('countryLeaderboardModal');
+    if (existing) existing.remove();
+
+    const { entries, total } = getSortedCountryLeaderboard();
+    const uniqueCountries = entries.length;
+
+    const rowsHtml = entries.length === 0
+        ? `<div style="color:#aaa; text-align:center; padding: 10px 0;">${t.countryLeaderboardNoData || tEn.countryLeaderboardNoData || 'No data'}</div>`
+        : entries.map((e, idx) => {
+            const pct = total > 0 ? ((e.count / total) * 100) : 0;
+            const pctText = `${pct.toFixed(4)}%`;
+
+            const medalColor = idx === 0 ? '#d4af37' : idx === 1 ? '#c0c0c0' : idx === 2 ? '#cd7f32' : null;
+            const rankColorStyle = medalColor ? `color:${medalColor}; font-weight:800;` : 'color:#666;';
+            const countryColorStyle = medalColor ? `color:${medalColor}; font-weight:800;` : 'color:#fff; font-weight:600;';
+            return `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.08);">
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="${rankColorStyle} min-width: 24px; text-align:right;">${idx + 1}.</span>
+                            <div data-country="${e.country}" style="${countryColorStyle}">${e.country}</div>
+                        </div>
+                        <div style="color:#777; font-size:12px; padding-left:32px;">${pctText}</div>
+                    </div>
+                    <div style="color:#fff; font-weight:700;">${e.count}</div>
+                </div>
+            `;
+        }).join('');
+
+    const modalHtml = `
+        <div id="countryLeaderboardModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(5px); z-index: 10001; display: flex; justify-content: center; align-items: center;">
+            <div style="background: #111; border-radius: 10px; width: 92%; max-width: 540px; max-height: 80vh; overflow: hidden; box-shadow: 0 5px 25px rgba(0,0,0,0.7); border: 1px solid #333; display:flex; flex-direction:column;">
+                <div style="padding: 15px; background: linear-gradient(to right, #11998e, #38ef7d); color: white; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
+                    <h3 style="margin: 0; font-size: 18px; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
+                        <i class="fas fa-globe"></i> ${t.countryLeaderboardTitle || tEn.countryLeaderboardTitle || 'Country leaderboard'}
+                    </h3>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button id="clearCountryLeaderboardBtn" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; font-size: 12px; cursor: pointer; padding: 4px 10px; border-radius: 4px;" title="${t.countryLeaderboardClear || tEn.countryLeaderboardClear || 'Clear leaderboard'}">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        <button id="closeCountryLeaderboardBtn" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 0 10px;">×</button>
+                    </div>
+                </div>
+                <div style="padding: 16px 20px; overflow-y:auto; flex-grow:1;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                        <span style="color:#aaa;">${t.countryLeaderboardTotalCountries || tEn.countryLeaderboardTotalCountries || 'Total countries encountered:'}</span>
+                        <span style="color:#fff; font-weight:700;">${uniqueCountries}</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 12px 15px;">
+                        ${rowsHtml}
+                    </div>
+                </div>
+                <div style="padding: 12px; background: #222; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #333; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
+                    chilltools.it
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    const close = () => {
+        const modal = document.getElementById('countryLeaderboardModal');
+        if (modal) modal.remove();
+    };
+
+    const closeBtn = document.getElementById('closeCountryLeaderboardBtn');
+    if (closeBtn) closeBtn.onclick = close;
+
+    const clearBtn = document.getElementById('clearCountryLeaderboardBtn');
+    if (clearBtn) clearBtn.onclick = function() {
+        if (confirm(t.countryLeaderboardClearConfirm || tEn.countryLeaderboardClearConfirm || 'Clear the entire country leaderboard?')) {
+            localStorage.removeItem(COUNTRY_LEADERBOARD_STORAGE_KEY);
+            lastCountryCountedIP = null;
+            close();
+        }
+    };
+
+    const modal = document.getElementById('countryLeaderboardModal');
+    if (modal) {
+        modal.onclick = function(e) {
+            if (e.target === this) close();
+        };
+    }
+}
+
+        function getPeopleCount() {
+            return parseInt(localStorage.getItem('peopleCount') || '0');
+        }
+
+        function incrementPeopleCount() {
+            const count = getPeopleCount() + 1;
+            localStorage.setItem('peopleCount', count.toString());
+            return count;
+        }
+
+        function updatePeopleCounter() {
+            const counterElement = document.getElementById('peopleCounterValue');
+            if (counterElement) {
+                counterElement.textContent = getPeopleCount();
+            }
+        }
+
+        function getSkipCount() {
+            return parseInt(localStorage.getItem('skipCount') || '0');
+        }
+
+        function incrementSkipCount() {
+            const count = getSkipCount() + 1;
+            localStorage.setItem('skipCount', count.toString());
+            console.log('Skip count incremented to:', count);
+            return count;
+        }
+
+        function setupSkipCounter() {
+            let lastButtonState = null;
+            
+            const updateSkipCounter = () => {
+                const skipButton = document.querySelector('.skipButton .mainText');
+                if (!skipButton) return;
+                
+                const currentState = skipButton.textContent;
+                
+                if (lastButtonState !== null && lastButtonState !== currentState) {
+                    incrementSkipCount();
+                }
+                
+                lastButtonState = currentState;
+            };
+            
+            const skipButtonObserver = new MutationObserver((mutations) => {
+                for (const mutation of mutations) {
+                    if (mutation.type === 'childList' || mutation.type === 'characterData') {
+                        updateSkipCounter();
+                    }
+                }
+            });
+            
+            const skipButton = document.querySelector('.skipButton .mainText');
+            if (skipButton) {
+                lastButtonState = skipButton.textContent;
+                skipButtonObserver.observe(skipButton, {
+                    childList: true,
+                    characterData: true,
+                    subtree: true
+                });
+            } else {
+                const buttonObserver = new MutationObserver(() => {
+                    const skipButton = document.querySelector('.skipButton .mainText');
+                    if (skipButton) {
+                        lastButtonState = skipButton.textContent;
+                        skipButtonObserver.observe(skipButton, {
+                            childList: true,
+                            characterData: true,
+                            subtree: true
+                        });
+                        buttonObserver.disconnect();
+                    }
+                });
+                
+                buttonObserver.observe(document.body, { childList: true, subtree: true });
+            }
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' || e.keyCode === 27) {
+
+                }
+            });
+        }
+
+        setupSkipCounter();
 
         const isUhmegle = window.location.hostname === 'uhmegle.com' || window.location.hostname === 'www.uhmegle.com';
         const isUmingle = window.location.hostname === 'umingle.com' || window.location.hostname === 'www.umingle.com';
         const baseUrl = isUmingle ? 'https://umingle.com' : 'https://uhmegle.com';
+
 
         if ((window.location.href === 'https://uhmegle.com/' || 
             window.location.href === 'https://uhmegle.com' ||
@@ -306,6 +606,13 @@
         function getOrCreateIpBox() {
             let ipBox = document.getElementById("ipDisplayBox");
 
+            if (isSaveButtonChoiceEnabled) {
+                const savedIpDisplay = localStorage.getItem('ipDisplayEnabled');
+                if (savedIpDisplay !== null) {
+                    isIpDisplayEnabled = savedIpDisplay === 'true';
+                }
+            }
+
             if (!ipBox) {
                 const countryInfoDiv = document.querySelector('.countryInfo');
                 const chatContainer = document.querySelector('.chat-container') || document.querySelector('.chatWindow');
@@ -324,9 +631,9 @@
                 ipBox.style.overflowX = "hidden";
                 ipBox.style.borderRadius = "10px";
                 ipBox.style.border = "1px solid #333";
-                ipBox.style.display = 'block';
+                ipBox.style.display = isIpDisplayEnabled ? 'block' : 'none';
                 ipBox.style.overflow = "hidden";
-                ipBox.style.flexShrink = "0";   
+                ipBox.style.flexShrink = "0";
                 ipBox.innerHTML = "<h3 style='color: #fff; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; margin: 0 0 10px 0;'>ChillTool's</h3>";
                 
                 if (countryInfoDiv && countryInfoDiv.parentNode) {
@@ -345,7 +652,27 @@
             return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         };
 
+        const isVideoPage = () => window.location.pathname.includes('/video/');
+        
+        const updateToolbarVisibility = () => {
+            const toolbar = document.getElementById('chillToolbar');
+            if (isVideoPage()) {
+                if (!toolbar) createToolbar();
+            } else if (toolbar) {
+                toolbar.remove();
+            }
+        };
+        
+        const urlObserver = new MutationObserver(updateToolbarVisibility);
+        urlObserver.observe(document.body, { childList: true, subtree: true });
+        
+        window.addEventListener('popstate', updateToolbarVisibility);
+        
         const createToolbar = () => {
+            if (!isVideoPage()) return null;
+            
+            const existingToolbar = document.getElementById('chillToolbar');
+            if (existingToolbar) return existingToolbar;
             const toolbar = document.createElement("div");
             toolbar.id = "chillToolbar";
             toolbar.style.position = "fixed";
@@ -398,14 +725,10 @@
             
             let isHistoryVisible = false;
             historyBtn.addEventListener("click", function() {
-                if (isHistoryVisible) {
-                    const existingModal = document.getElementById("historyModal");
-                    if (existingModal) existingModal.remove();
-                    isHistoryVisible = false;
-                } else {
-                    displayHistory();
-                    isHistoryVisible = true;
-                }
+                const existingModal = document.getElementById("historyModal");
+                if (existingModal) existingModal.remove();
+                displayHistory();
+                isHistoryVisible = true;
             });
             leftButtons.appendChild(historyBtn);
             
@@ -448,7 +771,8 @@
                         ip: currentSession.ip,
                         info: currentSession.info,
                         screenshot: currentSession.screenshot,
-                        timestamp: new Date().toLocaleString()
+                        timestamp: new Date().toLocaleString(),
+                        note: ''
                     };
                     bannedUsers.push(userToBan);
                     saveBannedUsers(bannedUsers);
@@ -489,7 +813,11 @@
             });
             leftButtons.appendChild(countryFilterBtn);
 
-            return toolbar;
+            if (isVideoPage()) {
+                document.body.appendChild(toolbar);
+                return toolbar;
+            }
+            return null;
         };
 
         function restartConnection() {
@@ -524,6 +852,7 @@
             
             const toast = document.createElement('div');
             toast.className = 'chill-toast';
+            toast.style.zIndex = '99999';
             
             let icon = 'info-circle';
             if (type === 'success') icon = 'check-circle';
@@ -554,6 +883,7 @@
                 container = document.createElement('div');
                 container.id = 'chill-toast-container';
                 container.className = 'chill-toast-container';
+                container.style.zIndex = '99999';
                 document.body.appendChild(container);
             }
             container.appendChild(toast);
@@ -691,668 +1021,941 @@
             }
         }
 
-        let isIpDisplayEnabled = true;
+        function saveButtonChoice(buttonId, action) {
+            if (!isSaveButtonChoiceEnabled) return;
+            
+            const choices = JSON.parse(localStorage.getItem('buttonChoices') || '{}');
+            choices[buttonId] = action;
+            localStorage.setItem('buttonChoices', JSON.stringify(choices));
+        }
+        
+        function loadButtonChoice(buttonId) {
+            if (!isSaveButtonChoiceEnabled) return null;
+            
+            const choices = JSON.parse(localStorage.getItem('buttonChoices') || '{}');
+            return choices[buttonId] || null;
+        }
 
-        const translations = {
-            en: {
-                showIpDisplay: 'Show IP Display',
-                settings: 'Settings',
-                settingsDesc: 'Here you can configure the extension settings',
-                language: 'Language:',
-                whiteColorNotAllowed: 'White color is not allowed. Please choose a different color.',
-                close: 'Close',
-                history: 'History',
-                ban: 'Block User',
-                bannedUsers: 'Blocked Users List',
-                restarting: 'Restarting connection...',
-                historyLimit: 'Only the last 30 people screenshots are saved',
-                emptyHistory: 'History is empty',
-                connectToStart: 'Connect with partners to start recording',
-                zero: '0 entries',
-                entry: 'entry',
-                entries: 'entries',
-                ip: 'IP',
-                city: 'City',
-                region: 'Region',
-                country: 'Country',
-                coordinates: 'Coordinates',
-                time: 'Time',
-                photoNotAvailable: 'The photo is no longer available',
-                skip25Msg: "THIS PERSON WAS MET MORE THAN 30 SKIPS AGO!",
-                banListTitle: 'Block List',
-                screenshot: 'Screenshot',
-                actions: 'Actions',
-                bannedListEmpty: 'Block list is empty',
-                videoModeSuggestion: 'Switch to video mode to use ChillTools',
-                textModeNotSupported: 'Text mode is not supported!',
-                betaWelcome: 'Welcome Aboard, Beta Tester!',
-                outdatedExtension: 'Extension is outdated!',
-                apply: 'Apply',
-                color: 'Color',
-                videoBorder: 'Custom Color',
-                userStyles: 'UserStyles',
-                userStylesDesc: 'Customize the look of the site and extension with custom CSS',
-                customCSS: 'Custom CSS',
-                reset: 'Reset',
-                save: 'Save',
-                gallery: 'Gallery',
-                userStyleActive: 'UserStyle is active. Custom colors are disabled.',
-                disableUserStyle: 'Disable UserStyle to use custom colors.',
-                galleryDesc: 'Choose from pre-made styles',
-                applyStyle: 'Apply',
-                darkMode: 'Better DarkMode',
-                fstool: 'FsTool',
-                stylesReset: 'Custom styles have been reset',
-                stylesSaved: 'Custom styles saved successfully!',
-                styleApplied: 'applied!',
-                omegle: 'Omegle Style',
-                pauseButton: 'Pause',
-                countryFilter: 'Country Filter',
-                countryFilterDesc: 'Select countries to connect with',
-                selectCountries: 'Select Countries',
-                noCountriesSelected: 'No countries selected - all countries allowed',
-                countriesSelected: 'countries selected'
-            },
-            zh: {
-                showIpDisplay: '显示IP',
-                settings: '设置',
-                settingsDesc: '在这里您可以配置扩展设置',
-                language: '语言:',
-                whiteColorNotAllowed: '不允许使用白色。请选择其他颜色。',
-                close: '关闭',
-                history: '历史记录',
-                ban: '屏蔽用户',
-                bannedUsers: '已屏蔽用户',
-                restarting: '正在重新启动连接...',
-                historyLimit: '只保存最后30个人的截图',
-                emptyHistory: '历史记录为空',
-                connectToStart: '连接伙伴开始录制',
-                zero: '0条记录',
-                entry: '条记录',
-                entries: '条记录',
-                ip: 'IP',
-                city: '城市',
-                region: '地区',
-                country: '国家',    
-                coordinates: '坐标',
-                time: '时间',
-                photoNotAvailable: '照片不再可用',
-                skip25Msg: "此人在30次跳过前遇到过！",
-                apply: '应用',
-                color: '颜色',
-                videoBorder: '自定义颜色',
-                banListTitle: '屏蔽列表',
-                screenshot: '截图',
-                actions: '操作',
-                bannedListEmpty: '屏蔽列表为空',
-                videoModeSuggestion: '切换到视频模式以使用 ChillTools',
-                textModeNotSupported: '文本模式不受支持！',
-                betaWelcome: '欢迎加入，测试员！',
-                outdatedExtension: '扩展已过期！',
-                userStyles: '用户样式',
-                userStylesDesc: '使用自定义CSS自定义网站和扩展的外观',
-                customCSS: '自定义CSS',
-                reset: '重置',
-                save: '保存',
-                gallery: '画廊',
-                userStyleActive: 'UserStyle 已激活。自定义颜色已禁用。',
-                disableUserStyle: '禁用 UserStyle 以使用自定义颜色。',
-                galleryDesc: '选择预制样式',
-                applyStyle: '应用',
-                darkMode: 'Better DarkMode',
-                fstool: 'FsTool',
-                stylesReset: '自定义样式已重置',
-                stylesSaved: '自定义样式保存成功！',
-                styleApplied: '已应用！',
-                omegle: 'Omegle Style',
-                pauseButton: '暂停',
-                countryFilter: '国家过滤',
-                countryFilterDesc: '选择要连接的国家',
-                selectCountries: '选择国家',
-                noCountriesSelected: '未选择国家 - 允许所有国家',
-                countriesSelected: '个国家已选择'
-            },
-            hi: {
-                showIpDisplay: 'आईपी डिस्प्ले बॉक्स दिखाएं',
-                settings: 'सेटिंग्स',
-                apply: 'लागू करें',
-                color: 'रंग',
-                videoBorder: 'कास्टम रंग',
-                whiteColorNotAllowed: 'सफेद रंग की अनुमति नहीं है। कृपया कोई अन्य रंग चुनें।',
-                settingsDesc: 'यहां आप एक्सटेंशन सेटिंग्स कॉन्फ़िगर कर सकते हैं',
-                language: 'भाषा:',
-                close: 'बंद करें',
-                history: 'इतिहास',
-                ban: 'उपयोगकर्ता को ब्लॉक करें',
-                bannedUsers: 'ब्लॉक किए गए उपयोगकर्ता',
-                restarting: 'कनेक्शन पुनः आरंभ किया जा रहा है...',
-                historyLimit: 'केवल अंतिम 30 लोगों के स्क्रीनशॉट सहेजे जाते हैं',
-                emptyHistory: 'इतिहास खाली है',
-                connectToStart: 'रिकॉर्डिंग शुरू करने के लिए साथियों से कनेक्ट करें',
-                zero: '0 प्रविष्टियाँ',
-                entry: 'प्रविष्टि',
-                entries: 'प्रविष्टियाँ',
-                ip: 'आईपी',
-                city: 'शहर',
-                region: 'क्षेत्र',
-                country: 'देश',
-                coordinates: 'निर्देशांक',
-                time: 'समय',
-                photoNotAvailable: 'फोटो अब उपलब्ध नहीं है',
-                skip25Msg: "यह व्यक्ति 30 से अधिक स्किप्स पहले मिला था!",
-                banListTitle: 'ब्लॉक सूची',
-                screenshot: 'स्क्रीनशॉट',
-                actions: 'कार्रवाई',
-                bannedListEmpty: 'ब्लॉक सूची खाली है',
-                videoModeSuggestion: 'ChillTools का उपयोग करने के लिए वीडियो मोड पर स्विच करें',
-                textModeNotSupported: 'टेक्स्ट मोड समर्थित नहीं है!',
-                betaWelcome: 'स्वागत है, बीटा परीक्षक!',
-                outdatedExtension: 'एक्सटेंशन पुराना हो गया है!',
-                userStyles: 'उपयोगकर्ता शैलियाँ',
-                userStylesDesc: 'कस्टम CSS के साथ साइट और एक्सटेंशन की लुक को कस्टमाइज़ करें',
-                customCSS: 'कस्टम CSS',
-                reset: 'रीसेट करें',
-                save: 'सहेजें',
-                gallery: 'गैलरी',
-                userStyleActive: 'UserStyle सक्रिय है। कस्टम रंग अक्षम हैं।',
-                disableUserStyle: 'कस्टम रंगों का उपयोग करने के लिए UserStyle अक्षम करें।',
-                galleryDesc: 'पूर्व-निर्मित शैलियों में से चुनें',
-                applyStyle: 'लागू करें',
-                darkMode: 'Better DarkMode',
-                fstool: 'FsTool',
-                stylesReset: 'कस्टम शैलियाँ रीसेट कर दी गई हैं',
-                stylesSaved: 'कस्टम शैलियाँ सफलतापूर्वक सहेजी गईं!',
-                styleApplied: 'लागू किया गया!',
-                omegle: 'Omegle Style',
-                pauseButton: 'रोकें',
-                countryFilter: 'देश फ़िल्टर',
-                countryFilterDesc: 'कनेक्ट करने के लिए देश चुनें',
-                selectCountries: 'देश चुनें',
-                noCountriesSelected: 'कोई देश नहीं चुना गया - सभी देश अनुमत',
-                countriesSelected: 'देश चुने गए'
-            },
-            es: {
-                showIpDisplay: 'Mostrar IP',
-                settings: 'Configuración',
-                settingsDesc: 'Aquí puedes configurar los ajustes de la extensión',
-                language: 'Idioma:',
-                whiteColorNotAllowed: 'El color blanco no está permitido. Por favor, elija un color diferente.',
-                close: 'Cerrar',
-                history: 'Historial',
-                ban: 'Bloquear usuario',
-                bannedUsers: 'Usuarios bloqueados',
-                restarting: 'Reiniciando conexión...',
-                historyLimit: 'Solo se guardan capturas de las últimas 30 personas',
-                emptyHistory: 'El historial está vacío',
-                connectToStart: 'Conéctate con compañeros para comenzar a grabar',
-                zero: '0 encuentros',
-                entry: 'entrada',
-                entries: 'entradas',
-                ip: 'IP',
-                city: 'Ciudad',
-                region: 'Región',
-                country: 'País',
-                coordinates: 'Coordenadas',
-                time: 'Hora',
-                photoNotAvailable: 'La foto ya no está disponible',
-                skip25Msg: "¡ESTA PERSONA FUE ENCONTRADA HACE MÁS DE 30 SKIPS!",
-                banListTitle: 'Lista de Bloqueados',
-                screenshot: 'Captura',
-                actions: 'Acciones',
-                bannedListEmpty: 'La lista de bloqueados está vacía',
-                videoModeSuggestion: 'Cambia al modo video para usar ChillTools',
-                textModeNotSupported: '¡El modo texto no es compatible!',
-                betaWelcome: '¡Bienvenido a bordo, tester beta!',
-                outdatedExtension: '¡La extensión está desactualizada!',
-                apply: 'Aplicar',
-                color: 'Color',
-                videoBorder: 'Color personalizado',
-                userStyles: 'UserStyles',
-                userStylesDesc: 'Personaliza el aspecto del sitio y la extensión con CSS personalizado',
-                customCSS: 'CSS Personalizado',
-                reset: 'Restablecer',
-                save: 'Guardar',
-                gallery: 'Galería',
-                userStyleActive: 'UserStyle está activo. Los colores personalizados están deshabilitados.',
-                disableUserStyle: 'Deshabilita UserStyle para usar colores personalizados.',
-                galleryDesc: 'Elige entre estilos predefinidos',
-                applyStyle: 'Aplicar',
-                darkMode: 'Better DarkMode',
-                fstool: 'FsTool',
-                stylesReset: 'Los estilos personalizados se han restablecido',
-                stylesSaved: '¡Estilos personalizados guardados con éxito!',
-                styleApplied: '¡aplicado!',
-                omegle: 'Omegle Style',
-                pauseButton: 'Pausar',
-                countryFilter: 'Filtro de País',
-                countryFilterDesc: 'Selecciona países para conectar',
-                selectCountries: 'Seleccionar Países',
-                noCountriesSelected: 'Ningún país seleccionado - todos los países permitidos',
-                countriesSelected: 'países seleccionados'
-            },
-            ar: {
-                settings: 'الإعدادات',
-                apply: 'تطبيق',
-                showIpDisplay: 'عرض IP',
-                color: 'لون',
-                videoBorder: 'لون مخصص',
-                whiteColorNotAllowed: 'اللون الأبيض غير مسموح به. الرجاء اختيار لون آخر.',
-                settingsDesc: 'هنا يمكنك تكوين إعدادات الامتداد',
-                language: 'اللغة:',
-                close: 'إغلاق',
-                history: 'السجل',
-                ban: 'حظر المستخدم',
-                bannedUsers: 'المستخدمون المحظورون',
-                restarting: 'جاري إعادة تشغيل الاتصال...',
-                historyLimit: 'يتم حفظ لقطات الشاشة لآخر 30 شخصًا فقط',
-                emptyHistory: 'السجل فارغ',
-                connectToStart: 'اتصل بالشركاء لبدء التسجيل',
-                zero: '0 إدخالات',
-                entry: 'إدخال',
-                entries: 'إدخالات',
-                ip: 'IP',
-                city: 'المدينة',
-                region: 'المنطقة',
-                country: 'البلد',
-                coordinates: 'الإحداثيات',
-                time: 'الوقت',
-                photoNotAvailable: 'الصورة لم تعد متوفرة',
-                skip25Msg: "تمت مقابلة هذا الشخص منذ أكثر من 30 تخطي!",
-                banListTitle: 'قائمة الحظر',
-                screenshot: 'لقطة الشاشة',
-                actions: 'إجراءات',
-                bannedListEmpty: 'قائمة الحظر فارغة',
-                videoModeSuggestion: 'بدّل إلى وضع الفيديو لاستخدام ChillTools',
-                textModeNotSupported: 'وضع النص غير مدعوم!',
-                betaWelcome: 'مرحبًا بكم، مختبِر النسخة التجريبية!',
-                outdatedExtension: 'الامتداد قديم!',
-                userStyles: 'أنماط المستخدم',
-                userStylesDesc: 'تخصيص مظهر الموقع والامتداد باستخدام CSS مخصص',
-                customCSS: 'CSS مخصص',
-                reset: 'إعادة تعيين',
-                save: 'حفظ',
-                gallery: 'معرض',
-                userStyleActive: 'UserStyle نشطة. الألوان المخصصة معطلة.',
-                disableUserStyle: 'عطل UserStyle لاستخدام الألوان المخصصة.',
-                galleryDesc: 'اختر من الأنماط الجاهزة',
-                applyStyle: 'تطبيق',
-                darkMode: 'Better DarkMode',
-                fstool: 'FsTool',
-                stylesReset: 'تم إعادة تعيين الأنماط المخصصة',
-                stylesSaved: 'تم حفظ الأنماط المخصصة بنجاح!',
-                styleApplied: 'تم التطبيق!',
-                omegle: 'Omegle Style',
-                pauseButton: 'إيقاف مؤقت',
-                countryFilter: 'تصفية البلد',
-                countryFilterDesc: 'حدد البلدان للاتصال بها',
-                selectCountries: 'اختر البلدان',
-                noCountriesSelected: 'لم يتم اختيار أي بلد - جميع البلدان مسموح بها',
-                countriesSelected: 'البلدان المحددة'
-            },
-            fr: {
-                settings: 'Paramètres',
-                apply: 'Appliquer',
-                color: 'Couleur',
-                showIpDisplay: 'Afficher la boîte d\'affichage IP',
-                videoBorder: 'Couleur personnalisée',
-                whiteColorNotAllowed: 'La couleur blanche n\'est pas autorisée. Veuillez choisir une couleur différente.',
-                settingsDesc: 'Ici vous pouvez configurer les paramètres de l\'extension',
-                language: 'Langue:',
-                close: 'Fermer',
-                history: 'Historique',
-                ban: 'Bloquer l\'utilisateur',
-                bannedUsers: 'Utilisateurs bloqués',
-                restarting: 'Redémarrage de la connexion...',
-                historyLimit: 'Seules les captures des 30 dernières personnes sont enregistrées',
-                emptyHistory: 'L\'historique est vide',
-                connectToStart: 'Connectez-vous avec des partenaires pour commencer l\'enregistrement',
-                zero: '0 entrées',
-                entry: 'entrée',
-                entries: 'entrées',
-                ip: 'IP',
-                city: 'Ville',
-                region: 'Région',
-                country: 'Pays',
-                coordinates: 'Coordonnées',
-                time: 'Heure',
-                photoNotAvailable: 'La photo n\'est plus disponible',
-                skip25Msg: "CETTE PERSONNE A ÉTÉ RENCONTRÉE IL Y A PLUS DE 30 SAUTS!",
-                banListTitle: 'Liste des Bloqués',
-                screenshot: 'Capture',
-                actions: 'Actions',
-                bannedListEmpty: 'La liste des bloqués est vide',
-                videoModeSuggestion: 'Passez en mode vidéo pour utiliser ChillTools',
-                textModeNotSupported: 'Le mode texte n\'est pas pris en charge !',
-                betaWelcome: 'Bienvenue à bord, testeur bêta !',
-                outdatedExtension: "L'extension est obsolète !",
-                userStyles: 'UserStyles',
-                userStylesDesc: 'Personnalisez l\'apparence du site et de l\'extension avec du CSS personnalisé',
-                customCSS: 'CSS Personnalisé',
-                reset: 'Réinitialiser',
-                save: 'Enregistrer',
-                gallery: 'Galerie',
-                userStyleActive: 'UserStyle est actif. Les couleurs personnalisées sont désactivées.',
-                disableUserStyle: 'Désactivez UserStyle pour utiliser les couleurs personnalisées.',
-                galleryDesc: 'Choisissez parmi les styles prédéfinis',
-                applyStyle: 'Appliquer',
-                darkMode: 'Better DarkMode',
-                fstool: 'FsTool',
-                stylesReset: 'Les styles personnalisés ont été réinitialisés',
-                stylesSaved: 'Styles personnalisés enregistrés avec succès!',
-                styleApplied: 'appliqué!',
-                omegle: 'Omegle Style',
-                pauseButton: 'Pause',
-                countryFilter: 'Filtre de Pays',
-                countryFilterDesc: 'Sélectionnez les pays à connecter',
-                selectCountries: 'Sélectionner les Pays',
-                noCountriesSelected: 'Aucun pays sélectionné - tous les pays autorisés',
-                countriesSelected: 'pays sélectionnés'
-            },
-            bn: {
-                settings: 'সেটিংস',
-                apply: 'প্রয়োগ করুন',
-                color: 'রঙ',
-                videoBorder: 'কাস্টম রঙ',
-                whiteColorNotAllowed: 'সাদা রং অনুমোদিত নয়। অনুগ্রহ করে একটি ভিন্ন রং নির্বাচন করুন।',
-                settingsDesc: 'এখানে আপনি এক্সটেনশন সেটিংস কনফিগার করতে পারেন',
-                language: 'ভাষা:',
-                showIpDisplay: 'IP দেখানো',
-                close: 'বন্ধ',
-                history: 'ইতিহাস',
-                ban: 'ব্যবহারকারী ব্লক করুন',
-                bannedUsers: 'ব্লক করা ব্যবহারকারীরা',
-                restarting: 'সংযোগ পুনরায় শুরু করা হচ্ছে...',
-                historyLimit: 'শুধুমাত্র শেষ 30 জনের স্ক্রিনশট সংরক্ষণ করা হয়',
-                emptyHistory: 'ইতিহাস খালি',
-                connectToStart: 'রেকর্ডিং শুরু করতে অংশীদারদের সাথে সংযোগ করুন',
-                zero: '0 এন্ট্রি',
-                entry: 'এন্ট্রি',
-                entries: 'এন্ট্রি',
-                ip: 'আইপি',
-                city: 'শহর',
-                region: 'অঞ্চল',
-                country: 'দেশ',
-                coordinates: 'স্থানাঙ্ক',
-                time: 'সময়',
-                photoNotAvailable: 'ছবিটি আর পাওয়া যাচ্ছে না',
-                skip25Msg: "এই ব্যক্তিকে 30 টির বেশি স্কিপ আগে দেখা হয়েছিল!",
-                banListTitle: 'ব্লক তালিকা',
-                screenshot: 'স্ক্রিনশট',
-                actions: 'কার্যকলাপ',
-                bannedListEmpty: 'ব্লক তালিকা খালি',
-                videoModeSuggestion: 'ChillTools ব্যবহার করতে ভিডিও মোডে স্যুইচ করুন',
-                textModeNotSupported: 'টেক্সট মোড সমর্থিত নয়!',
-                betaWelcome: 'স্বাগতম, বেটা পরীক্ষক!',
-                outdatedExtension: 'এক্সটেনশনটি পুরোনো হয়ে গেছে!',
-                apply: 'প্রয়োগ করুন',
-                color: 'রঙ',
-                userStyles: 'ব্যবহারকারী শৈলী',
-                userStylesDesc: 'কাস্টম CSS দিয়ে সাইট এবং এক্সটেনশনের চেহারা কাস্টমাইজ করুন',
-                customCSS: 'কাস্টম CSS',
-                reset: 'রিসেট করুন',
-                save: 'সংরক্ষণ করুন',
-                gallery: 'গ্যালারি',
-                userStyleActive: 'UserStyle সক্রিয়। কাস্টম রঙ নিষ্ক্রিয়।',
-                disableUserStyle: 'কাস্টম রঙ ব্যবহার করতে UserStyle নিষ্ক্রিয় করুন।',
-                galleryDesc: 'পূর্ব-নির্মিত শৈলী থেকে বেছে নিন',
-                applyStyle: 'প্রয়োগ করুন',
-                darkMode: 'Better DarkMode',
-                fstool: 'FsTool',
-                stylesReset: 'কাস্টম শৈলী রিসেট করা হয়েছে',
-                stylesSaved: 'কাস্টম শৈলী সফলভাবে সংরক্ষিত হয়েছে!',
-                styleApplied: 'প্রয়োগ করা হয়েছে!',
-                omegle: 'Omegle Style',
-                pauseButton: 'থামান',
-                countryFilter: 'দেশ ফিল্টার',
-                countryFilterDesc: 'সংযোগ করার জন্য দেশ নির্বাচন করুন',
-                selectCountries: 'দেশ নির্বাচন করুন',
-                noCountriesSelected: 'কোনো দেশ নির্বাচন করা হয়নি - সব দেশ অনুমোদিত',
-                countriesSelected: 'দেশ নির্বাচিত'
-            },
-
-            ru: {
-                settings: 'Настройки',
-                apply: 'Применить',
-                color: 'Цвет',
-                videoBorder: 'Кастомный цвет',
-                whiteColorNotAllowed: 'Белый цвет не разрешен. Пожалуйста, выберите другой цвет.',
-                settingsDesc: 'Здесь вы можете настроить параметры расширения',
-                language: 'Язык:',
-                close: 'Закрыть',
-                showIpDisplay: 'Отображать IP',
-                history: 'История',
-                ban: 'Заблокировать',
-                bannedUsers: 'Заблокированные',
-                restarting: 'Перезапуск соединения...',
-                historyLimit: 'Сохраняются только скриншоты последних 30 человек',
-                emptyHistory: 'История пуста',
-                connectToStart: 'Подключитесь к партнерам, чтобы начать запись',
-                zero: '0 встреч',
-                entry: 'вход',
-                entries: 'входы',
-                ip: 'IP',
-                city: 'Город',
-                region: 'Регион',
-                country: 'Страна',
-                coordinates: 'Координаты',
-                time: 'Время',
-                photoNotAvailable: 'Фотография больше недоступна',
-                skip25Msg: "ЭТОТ ЧЕЛОВЕК БЫЛ ВСТРЕЧЕН БОЛЕЕ 30 SKIPS НАЗАД!",
-                banListTitle: 'Список блокировки',
-                screenshot: 'Скриншот',
-                actions: 'Действия',
-                bannedListEmpty: 'Список блокировки пуст',
-                videoModeSuggestion: 'Переключитесь в видеорежим, чтобы использовать ChillTools',
-                textModeNotSupported: 'Текстовый режим не поддерживается!',
-                betaWelcome: 'Добро пожаловать, бета-тестер!',
-                outdatedExtension: 'Расширение устарело!',
-                apply: 'Применить',
-                color: 'Цвет',
-                userStyles: 'Пользовательские стили',
-                userStylesDesc: 'Настройте внешний вид сайта и расширения с помощью пользовательского CSS',
-                customCSS: 'Пользовательский CSS',
-                reset: 'Сбросить',
-                save: 'Сохранить',
-                gallery: 'Галерея',
-                userStyleActive: 'UserStyle активен. Пользовательские цвета отключены.',
-                disableUserStyle: 'Отключите UserStyle для использования пользовательских цветов.',
-                galleryDesc: 'Выберите из готовых стилей',
-                applyStyle: 'Применить',
-                darkMode: 'Better DarkMode',
-                fstool: 'FsTool',
-                stylesReset: 'Пользовательские стили сброшены',
-                stylesSaved: 'Пользовательские стили успешно сохранены!',
-                styleApplied: 'применено!',
-                omegle: 'Omegle Style',
-                pauseButton: 'Пауза',
-                countryFilter: 'Фильтр стран',
-                countryFilterDesc: 'Выберите страны для подключения',
-                selectCountries: 'Выбрать страны',
-                noCountriesSelected: 'Страны не выбраны - все страны разрешены',
-                countriesSelected: 'стран выбрано'
-            },
-            pt: {
-                settings: 'Configurações',
-                apply: 'Aplicar',
-                color: 'Cor',
-                videoBorder: 'Cor personalizada',
-                whiteColorNotAllowed: 'A cor branca não é permitida. Por favor, escolha uma cor diferente.',
-                settingsDesc: 'Aqui você pode configurar as configurações da extensão',
-                language: 'Idioma:',
-                showIpDisplay: 'Mostrar IP',
-                close: 'Fechar',
-                history: 'Histórico',
-                ban: 'Bloquear usuário',
-                bannedUsers: 'Usuários bloqueados',
-                restarting: 'Reiniciando conexão...',
-                historyLimit: 'Apenas os screenshots das últimas 30 pessoas são salvos',
-                emptyHistory: 'O histórico está vazio',
-                connectToStart: 'Conecte-se com parceiros para começar a gravar',
-                zero: '0 encontros',
-                entry: 'entrada',
-                entries: 'entradas',
-                ip: 'IP',
-                city: 'Cidade',
-                region: 'Região',
-                country: 'País',
-                coordinates: 'Coordenadas',
-                time: 'Tempo',
-                photoNotAvailable: 'A foto não está mais disponível',
-                skip25Msg: "ESTA PESSOA FOI ENCONTRADA HÁ MAIS DE 30 SKIPS!",
-                banListTitle: 'Lista de Bloqueados',
-                screenshot: 'Captura',
-                actions: 'Ações',
-                bannedListEmpty: 'A lista de bloqueados está vazia',
-                videoModeSuggestion: 'Mude para o modo vídeo para usar o ChillTools',
-                textModeNotSupported: 'O modo texto não é suportado!',
-                betaWelcome: 'Bem-vindo a bordo, testador beta!',
-                outdatedExtension: 'A extensão está desatualizada!',
-                apply: 'Aplicar',
-                color: 'Cor',
-                userStyles: 'UserStyles',
-                userStylesDesc: 'Personalize a aparência do site e da extensão com CSS personalizado',
-                customCSS: 'CSS Personalizado',
-                reset: 'Redefinir',
-                save: 'Salvar',
-                gallery: 'Galeria',
-                userStyleActive: 'UserStyle está ativo. Cores personalizadas estão desativadas.',
-                disableUserStyle: 'Desative UserStyle para usar cores personalizadas.',
-                galleryDesc: 'Escolha entre estilos pré-definidos',
-                applyStyle: 'Aplicar',
-                darkMode: 'Better DarkMode',
-                fstool: 'FsTool',
-                stylesReset: 'Estilos personalizados foram redefinidos',
-                stylesSaved: 'Estilos personalizados salvos com sucesso!',
-                styleApplied: 'aplicado!',
-                omegle: 'Omegle Style',
-                pauseButton: 'Pause',
-                countryFilter: 'Filtro de País',
-                countryFilterDesc: 'Selecione países para conectar',
-                selectCountries: 'Selecionar Países',
-                noCountriesSelected: 'Nenhum país selecionado - todos os países permitidos',
-                countriesSelected: 'países selecionados'
-            },
-            id: {
-                settings: 'Pengaturan',
-                apply: 'Terapkan',
-                color: 'Warna',
-                videoBorder: 'Warna kustom',
-                whiteColorNotAllowed: 'Warna putih tidak diizinkan. Silakan pilih warna yang berbeda.',
-                settingsDesc: 'Di sini Anda dapat mengonfigurasi pengaturan ekstensi',
-                language: 'Bahasa:',
-                showIpDisplay: 'Tampilkan IP',
-                close: 'Tutup',
-                history: 'Riwayat',
-                ban: 'Blokir pengguna',
-                bannedUsers: 'Pengguna yang diblokir',
-                restarting: 'Memulai ulang koneksi...',
-                historyLimit: 'Hanya screenshot dari 30 orang terakhir yang disimpan',
-                emptyHistory: 'Riwayat kosong',
-                connectToStart: 'Hubungi mitra untuk mulai merekam',
-                zero: '0 entri',
-                entry: 'entri',
-                entries: 'entri',
-                ip: 'IP',
-                city: 'Kota',
-                region: 'Wilayah',
-                country: 'Negara',
-                coordinates: 'Koordinat',
-                time: 'Waktu',
-                photoNotAvailable: 'Foto tidak tersedia lagi',
-                skip25Msg: "ORANG INI DITEMUI LEBIH DARI 30 SKIP YANG LALU!",
-                banListTitle: 'Daftar Blokir',
-                screenshot: 'Screenshot',
-                actions: 'Aksi',
-                bannedListEmpty: 'Daftar blokir kosong',
-                videoModeSuggestion: 'Beralih ke mode video untuk menggunakan ChillTools',
-                textModeNotSupported: 'Mode teks tidak didukung!',
-                betaWelcome: 'Selamat datang, penguji beta!',
-                outdatedExtension: 'Ekstensi sudah usang!',
-                apply: 'Terapkan',
-                color: 'Warna',
-                userStyles: 'UserStyles',
-                userStylesDesc: 'Sesuaikan tampilan situs dan ekstensi dengan CSS kustom',
-                customCSS: 'CSS Kustom',
-                reset: 'Atur Ulang',
-                save: 'Simpan',
-                gallery: 'Galeri',
-                userStyleActive: 'UserStyle aktif. Warna kustom dinonaktifkan.',
-                disableUserStyle: 'Nonaktifkan UserStyle untuk menggunakan warna kustom.',
-                galleryDesc: 'Pilih dari gaya yang sudah jadi',
-                applyStyle: 'Terapkan',
-                darkMode: 'Better DarkMode',
-                fstool: 'FsTool',
-                stylesReset: 'Gaya kustom telah direset',
-                stylesSaved: 'Gaya kustom berhasil disimpan!',
-                styleApplied: 'diterapkan!',
-                omegle: 'Omegle Style',
-                pauseButton: 'Jeda',
-                countryFilter: 'Filter Negara',
-                countryFilterDesc: 'Pilih negara untuk terhubung',
-                selectCountries: 'Pilih Negara',
-                noCountriesSelected: 'Tidak ada negara yang dipilih - semua negara diizinkan',
-                countriesSelected: 'negara dipilih'
-            },
-            it: {
-                settings: 'Impostazioni',
-                apply: 'Applica',
-                color: 'Colore',
-                videoBorder: 'Colori personalizzati',
-                whiteColorNotAllowed: 'Il colore bianco non è consentito. Si prega di scegliere un colore diverso.',
-                settingsDesc: "Qui puoi configurare le impostazioni dell'estensione",
-                language: 'Lingua:',
-                close: 'Chiudi',
-                showIpDisplay: 'Mostra IP',
-                history: 'Cronologia',
-                ban: 'Blocca utente',
-                bannedUsers: 'Utenti bloccati',
-                restarting: 'Riconnessione in corso...',
-                historyLimit: 'Vengono salvati solo gli screenshot delle ultime 30 persone',
-                emptyHistory: 'La cronologia è vuota',
-                connectToStart: 'Connettiti con i partner per iniziare la registrazione',
-                zero: '0 incontri',
-                entry: 'incontro',
-                entries: 'incontri',
-                ip: 'IP',
-                city: 'Città',
-                region: 'Regione',
-                country: 'Paese',
-                coordinates: 'Coordinate',
-                time: 'Ora',
-                photoNotAvailable: 'La foto non è più disponibile',
-                skip25Msg: "QUESTA PERSONE È STATA INCONTRATA PIU' DI 30 SKIPS FA!",
-                banListTitle: 'Lista Bloccati',
-                screenshot: 'Screenshot',
-                actions: 'Azioni',
-                bannedListEmpty: 'La lista dei bloccati è vuota',
-                videoModeSuggestion: 'Passa alla modalità video per usare ChillTools',
-                textModeNotSupported: 'La modalità testo non è supportata!',
-                betaWelcome: 'Benvenuto a bordo, beta tester!',
-                outdatedExtension: "L'estensione non è aggiornata!",
-                userStyles: 'UserStyles',
-                userStylesDesc: 'Personalizza l\'aspetto del sito e dell\'estensione con CSS personalizzato',
-                customCSS: 'CSS Personalizzato',
-                reset: 'Ripristina',
-                save: 'Salva',
-                gallery: 'Galleria',
-                userStyleActive: 'UserStyle è attivo. I colori personalizzati sono disabilitati.',
-                disableUserStyle: 'Disabilita UserStyle per usare i colori personalizzati.',
-                galleryDesc: 'Scegli tra gli stili predefiniti',
-                applyStyle: 'Applica',
-                darkMode: 'Better DarkMode',
-                fstool: 'FsTool',
-                stylesReset: 'Gli stili personalizzati sono stati ripristinati',
-                stylesSaved: 'Stili personalizzati salvati con successo!',
-                styleApplied: 'applicato!',
-                omegle: 'Omegle Style',
-                pauseButton: 'Pausa',
-                countryFilter: 'Filtro Paese',
-                countryFilterDesc: 'Seleziona i paesi con cui connetterti',
-                selectCountries: 'Seleziona Paesi',
-                noCountriesSelected: 'Nessun paese selezionato - tutti i paesi consentiti',
-                countriesSelected: 'paesi selezionati'
-            }
-        };
+const translations = {
+    en: {
+        showIpDisplay: 'Show IP Display',
+        settings: 'Settings',
+        settingsDesc: 'Here you can configure the extension settings',
+        language: 'Language:',
+        whiteColorNotAllowed: 'White color is not allowed. Please choose a different color.',
+        close: 'Close',
+        download: 'Download',
+        history: 'History',
+        ban: 'Block User',
+        bannedUsers: 'Blocked Users List',
+        restarting: 'Restarting connection...',
+        historyLimit: 'Only the last 30 people screenshots are saved',
+        emptyHistory: 'History is empty',
+        connectToStart: 'Connect with partners to start recording',
+        zero: '0 entries',
+        entry: 'entry',
+        entries: 'entries',
+        ip: 'IP',
+        city: 'City',
+        region: 'Region',
+        country: 'Country',
+        coordinates: 'Coordinates',
+        time: 'Time',
+        photoNotAvailable: 'The photo is no longer available',
+        skip25Msg: "THIS PERSON WAS MET MORE THAN 30 SKIPS AGO!",
+        banListTitle: 'Block List',
+        screenshot: 'Screenshot',
+        actions: 'Actions',
+        bannedListEmpty: 'Block list is empty',
+        videoModeSuggestion: 'Switch to video mode to use ChillTools',
+        textModeNotSupported: 'Text mode is not supported!',
+        betaWelcome: 'Welcome Aboard, Beta Tester!',
+        outdatedExtension: 'Extension is outdated!',
+        apply: 'Apply',
+        color: 'Color',
+        videoBorder: 'Custom Color',
+        userStyles: 'UserStyles',
+        userStylesDesc: 'Customize the look of the site and extension with custom CSS',
+        customCSS: 'Custom CSS',
+        reset: 'Reset',
+        save: 'Save',
+        gallery: 'Gallery',
+        userStyleActive: 'UserStyle is active. Custom colors are disabled.',
+        disableUserStyle: 'Disable UserStyle to use custom colors.',
+        galleryDesc: 'Choose from pre-made styles',
+        applyStyle: 'Apply',
+        darkMode: 'Better DarkMode',
+        fstool: 'FsTool',
+        stylesReset: 'Custom styles have been reset',
+        stylesSaved: 'Custom styles saved successfully!',
+        styleApplied: 'applied!',
+        omegle: 'Omegle Style',
+        pauseButton: 'Pause',
+        countryFilter: 'Country Filter',
+        countryFilterDesc: 'Select countries to connect with',
+        selectCountries: 'Select Countries',
+        noCountriesSelected: 'No countries selected - all countries allowed',
+        countriesSelected: 'countries selected',
+        peopleEncountered: 'People Encountered',
+        saveButtonChoice: 'Save button choices',
+        persistent: 'Persistent',
+        persistentTooltip: 'Save the last choice made on buttons',
+        showIp: 'Show IP',
+        showIpTooltip: 'Show/hide IP box',
+        statistics: 'Statistics',
+        donate: 'Donate',
+        statisticsTitle: 'Usage Statistics',
+        totalTimeSpent: 'Total Time Spent',
+        skips: 'Skips',
+        enterIpToBlock: 'Enter IP to block',
+        blockIp: 'Block IP',
+        reviewTitle: "Enjoying ChillTool's?",
+        reviewBody: 'If you like it, please leave a 5-star review. It helps a lot!',
+        reviewLater: 'Maybe later',
+        reviewOk: 'OK',
+        countryLeaderboardBtn: 'Country leaderboard',
+        countryLeaderboardTitle: 'Country leaderboard',
+        countryLeaderboardTotalCountries: 'Total countries encountered:',
+        countryLeaderboardNoData: 'No data',
+        countryLeaderboardClear: 'Clear leaderboard',
+        countryLeaderboardClearConfirm: 'Clear the entire country leaderboard?',
+        noteMaxChars: 'Max 50 characters'
+    },
+    zh: {
+        showIpDisplay: '显示IP',
+        settings: '设置',
+        settingsDesc: '在这里您可以配置扩展设置',
+        language: '语言:',
+        whiteColorNotAllowed: '不允许使用白色。请选择其他颜色。',
+        close: '关闭',
+        history: '历史记录',
+        ban: '屏蔽用户',
+        bannedUsers: '已屏蔽用户',
+        restarting: '正在重新启动连接...',
+        historyLimit: '只保存最后30个人的截图',
+        emptyHistory: '历史记录为空',
+        connectToStart: '连接伙伴开始录制',
+        zero: '0条记录',
+        entry: '条记录',
+        entries: '条记录',
+        ip: 'IP',
+        city: '城市',
+        region: '地区',
+        country: '国家',
+        coordinates: '坐标',
+        time: '时间',
+        photoNotAvailable: '照片不再可用',
+        skip25Msg: "此人在30次跳过前遇到过！",
+        apply: '应用',
+        color: '颜色',
+        videoBorder: '自定义颜色',
+        banListTitle: '屏蔽列表',
+        screenshot: '截图',
+        actions: '操作',
+        bannedListEmpty: '屏蔽列表为空',
+        videoModeSuggestion: '切换到视频模式以使用 ChillTools',
+        textModeNotSupported: '文本模式不受支持！',
+        betaWelcome: '欢迎加入，测试员！',
+        outdatedExtension: '扩展已过期！',
+        userStyles: '用户样式',
+        userStylesDesc: '使用自定义CSS自定义网站和扩展的外观',
+        customCSS: '自定义CSS',
+        reset: '重置',
+        save: '保存',
+        gallery: '画廊',
+        userStyleActive: 'UserStyle 已激活。自定义颜色已禁用。',
+        disableUserStyle: '禁用 UserStyle 以使用自定义颜色。',
+        galleryDesc: '选择预制样式',
+        applyStyle: '应用',
+        darkMode: 'Better DarkMode',
+        fstool: 'FsTool',
+        stylesReset: '自定义样式已重置',
+        stylesSaved: '自定义样式保存成功！',
+        styleApplied: '已应用！',
+        omegle: 'Omegle Style',
+        pauseButton: '暂停',
+        countryFilter: '国家过滤',
+        countryFilterDesc: '选择要连接的国家',
+        selectCountries: '选择国家',
+        noCountriesSelected: '未选择国家 - 允许所有国家',
+        countriesSelected: '个国家已选择',
+        peopleEncountered: '遇到的用户',
+        saveButtonChoice: '保存按钮选择',
+        persistent: '持久化',
+        persistentTooltip: '保存按钮的最后选择',
+        showIp: '显示IP',
+        showIpTooltip: '显示/隐藏IP框',
+        statistics: '统计',
+        donate: '捐赠',
+        statisticsTitle: '使用统计',
+        totalTimeSpent: '总使用时间',
+        skips: '跳过次数',
+        close: '关闭',
+        enterIpToBlock: '输入要阻止的IP',
+        blockIp: '阻止IP',
+        reviewTitle: '喜欢 ChillTool\'s 吗？',
+        reviewBody: '如果您喜欢，请给我们一个五星好评，这对我们非常有帮助！',
+        reviewLater: '稍后再说',
+        reviewOk: '好的',
+        countryLeaderboardBtn: '国家排行榜',
+        countryLeaderboardTitle: '国家排行榜',
+        countryLeaderboardTotalCountries: '遇到的国家总数：',
+        countryLeaderboardNoData: '暂无数据',
+        countryLeaderboardClear: '清除排行榜',
+        noteMaxChars: '最多50个字符',
+        countryLeaderboardClearConfirm: '清除整个国家排行榜？'
+    },
+    hi: {
+        showIpDisplay: 'आईपी डिस्प्ले बॉक्स दिखाएं',
+        settings: 'सेटिंग्स',
+        apply: 'लागू करें',
+        color: 'रंग',
+        videoBorder: 'कास्टम रंग',
+        whiteColorNotAllowed: 'सफेद रंग की अनुमति नहीं है। कृपया कोई अन्य रंग चुनें।',
+        settingsDesc: 'यहां आप एक्सटेंशन सेटिंग्स कॉन्फ़िगर कर सकते हैं',
+        language: 'भाषा:',
+        close: 'बंद करें',
+        history: 'इतिहास',
+        ban: 'उपयोगकर्ता को ब्लॉक करें',
+        bannedUsers: 'ब्लॉक किए गए उपयोगकर्ता',
+        restarting: 'कनेक्शन पुनः आरंभ किया जा रहा है...',
+        historyLimit: 'केवल अंतिम 30 लोगों के स्क्रीनशॉट सहेजे जाते हैं',
+        emptyHistory: 'इतिहास खाली है',
+        connectToStart: 'रिकॉर्डिंग शुरू करने के लिए साथियों से कनेक्ट करें',
+        zero: '0 प्रविष्टियाँ',
+        entry: 'प्रविष्टि',
+        entries: 'प्रविष्टियाँ',
+        ip: 'आईपी',
+        city: 'शहर',
+        region: 'क्षेत्र',
+        country: 'देश',
+        coordinates: 'निर्देशांक',
+        time: 'समय',
+        photoNotAvailable: 'फोटो अब उपलब्ध नहीं है',
+        skip25Msg: "यह व्यक्ति 30 से अधिक स्किप्स पहले मिला था!",
+        banListTitle: 'ब्लॉक सूची',
+        screenshot: 'स्क्रीनशॉट',
+        actions: 'कार्रवाई',
+        bannedListEmpty: 'ब्लॉक सूची खाली है',
+        videoModeSuggestion: 'ChillTools का उपयोग करने के लिए वीडियो मोड पर स्विच करें',
+        textModeNotSupported: 'टेक्स्ट मोड समर्थित नहीं है!',
+        betaWelcome: 'स्वागत है, बीटा परीक्षक!',
+        outdatedExtension: 'एक्सटेंशन पुराना हो गया है!',
+        userStyles: 'उपयोगकर्ता शैलियाँ',
+        userStylesDesc: 'कस्टम CSS के साथ साइट और एक्सटेंशन की लुक को कस्टमाइज़ करें',
+        customCSS: 'कस्टम CSS',
+        reset: 'रीसेट करें',
+        save: 'सहेजें',
+        gallery: 'गैलरी',
+        userStyleActive: 'UserStyle सक्रिय है। कस्टम रंग अक्षम हैं।',
+        disableUserStyle: 'कस्टम रंगों का उपयोग करने के लिए UserStyle अक्षम करें।',
+        galleryDesc: 'पूर्व-निर्मित शैलियों में से चुनें',
+        applyStyle: 'लागू करें',
+        darkMode: 'Better DarkMode',
+        fstool: 'FsTool',
+        stylesReset: 'कस्टम शैलियाँ रीसेट कर दी गई हैं',
+        stylesSaved: 'कस्टम शैलियाँ सफलतापूर्वक सहेजी गईं!',
+        styleApplied: 'लागू किया गया!',
+        omegle: 'Omegle Style',
+        pauseButton: 'रोकें',
+        countryFilter: 'देश फ़िल्टर',
+        countryFilterDesc: 'कनेक्ट करने के लिए देश चुनें',
+        selectCountries: 'देश चुनें',
+        noCountriesSelected: 'कोई देश नहीं चुना गया - सभी देश अनुमत',
+        countriesSelected: 'देश चुने गए',
+        peopleEncountered: 'मिले लोग',
+        saveButtonChoice: 'बटन विकल्प सहेजें',
+        persistent: 'स्थायी',
+        persistentTooltip: 'बटनों पर की गई अंतिम पसंद सहेजें',
+        showIp: 'आईपी दिखाएं',
+        showIpTooltip: 'आईपी बॉक्स दिखाएं/छुपाएं',
+        statistics: 'आंकड़े',
+        donate: 'दान करें',
+        statisticsTitle: 'उपयोग आंकड़े',
+        totalTimeSpent: 'कुल बिताया समय',
+        skips: 'स्किप',
+        enterIpToBlock: 'ब्लॉक करने के लिए आईपी दर्ज करें',
+        blockIp: 'आईपी ब्लॉक करें',
+        reviewTitle: 'ChillTool\'s पसंद आ रहा है?',
+        reviewBody: 'अगर आपको पसंद है, तो कृपया 5‑स्टार रिव्यू दें। यह बहुत मदद करता है!',
+        reviewLater: 'शायद बाद में',
+        reviewOk: 'ठीक है',
+        countryLeaderboardBtn: 'देश रैंकिंग',
+        countryLeaderboardTitle: 'देश रैंकिंग',
+        countryLeaderboardTotalCountries: 'कुल मिले देश:',
+        countryLeaderboardNoData: 'कोई डेटा नहीं',
+        countryLeaderboardClear: 'रैंकिंग साफ़ करें',
+        noteMaxChars: 'अधिकतम 50 अक्षर',
+        countryLeaderboardClearConfirm: 'पूरी देश रैंकिंग साफ़ करें?'
+    },
+    es: {
+        settings: 'Configuración',
+        apply: 'Aplicar',
+        color: 'Color',
+        videoBorder: 'Color personalizado',
+        whiteColorNotAllowed: 'El color blanco no está permitido. Por favor, elija un color diferente.',
+        settingsDesc: 'Aquí puedes configurar los ajustes de la extensión',
+        language: 'Idioma:',
+        close: 'Cerrar',
+        history: 'Historial',
+        ban: 'Bloquear usuario',
+        bannedUsers: 'Usuarios bloqueados',
+        enterIpToBlock: 'Ingresar IP para bloquear',
+        blockIp: 'Bloquear IP',
+        restarting: 'Reiniciando conexión...',
+        historyLimit: 'Solo se guardan capturas de las últimas 30 personas',
+        emptyHistory: 'El historial está vacío',
+        connectToStart: 'Conéctate con compañeros para comenzar a grabar',
+        zero: '0 encuentros',
+        entry: 'entrada',
+        entries: 'entradas',
+        ip: 'IP',
+        city: 'Ciudad',
+        region: 'Región',
+        country: 'País',
+        coordinates: 'Coordenadas',
+        time: 'Hora',
+        photoNotAvailable: 'La foto ya no está disponible',
+        skip25Msg: "¡ESTA PERSONA FUE ENCONTRADA HÁ MÁS DE 30 SKIPS!",
+        banListTitle: 'Lista de Bloqueados',
+        screenshot: 'Captura',
+        actions: 'Acciones',
+        bannedListEmpty: 'La lista de bloqueados está vacía',
+        videoModeSuggestion: 'Cambia al modo video para usar ChillTools',
+        textModeNotSupported: '¡El modo texto no es compatible!',
+        betaWelcome: '¡Bienvenido a bordo, tester beta!',
+        outdatedExtension: '¡La extensión está desactualizada!',
+        userStyles: 'UserStyles',
+        userStylesDesc: 'Personaliza el aspecto del sitio y la extensión con CSS personalizado',
+        customCSS: 'CSS Personalizado',
+        reset: 'Restablecer',
+        save: 'Guardar',
+        gallery: 'Galería',
+        userStyleActive: 'UserStyle está activo. Los colores personalizados están deshabilitados.',
+        disableUserStyle: 'Deshabilita UserStyle para usar colores personalizados.',
+        galleryDesc: 'Elige entre estilos predefinidos',
+        applyStyle: 'Aplicar',
+        darkMode: 'Better DarkMode',
+        fstool: 'FsTool',
+        stylesReset: 'Los estilos personalizados se han restablecido',
+        stylesSaved: '¡Estilos personalizados guardados con éxito!',
+        styleApplied: '¡aplicado!',
+        omegle: 'Omegle Style',
+        pauseButton: 'Pausar',
+        countryFilter: 'Filtro de País',
+        countryFilterDesc: 'Selecciona países para conectar',
+        selectCountries: 'Seleccionar Países',
+        noCountriesSelected: 'Ningún país seleccionado - todos los países permitidos',
+        countriesSelected: 'países seleccionados',
+        peopleEncountered: 'Personas encontradas',
+        saveButtonChoice: 'Guardar elección de botones',
+        persistent: 'PERSISTENTE',
+        persistentTooltip: 'Guarda la última elección hecha en los botones',
+        showIp: 'Mostrar IP',
+        showIpTooltip: 'Mostrar/ocultar el cuadro de IP',
+        statistics: 'Estadísticas',
+        donate: 'Donar',
+        statisticsTitle: 'Estadísticas de Uso',
+        totalTimeSpent: 'Tiempo Total Transcurrido',
+        skips: 'Saltos',
+        reviewTitle: '¿Te gusta ChillTool\'s?',
+        reviewBody: 'Si te gusta, por favor deja una reseña de 5 estrellas. ¡Nos ayuda mucho!',
+        reviewLater: 'Quizás más tarde',
+        reviewOk: 'OK',
+        countryLeaderboardBtn: 'Clasificación de países',
+        countryLeaderboardTitle: 'Clasificación de países',
+        countryLeaderboardTotalCountries: 'Total de países encontrados:',
+        countryLeaderboardNoData: 'Sin datos',
+        countryLeaderboardClear: 'Borrar clasificación',
+        noteMaxChars: 'Máximo 50 caracteres',
+        countryLeaderboardClearConfirm: '¿Borrar toda la clasificación de países?'
+    },
+    ar: {
+        settings: 'الإعدادات',
+        apply: 'تطبيق',
+        showIpDisplay: 'عرض IP',
+        color: 'لون',
+        videoBorder: 'لون مخصص',
+        whiteColorNotAllowed: 'اللون الأبيض غير مسموح به. الرجاء اختيار لون آخر.',
+        settingsDesc: 'هنا يمكنك تكوين إعدادات الامتداد',
+        language: 'اللغة:',
+        close: 'إغلاق',
+        history: 'السجل',
+        ban: 'حظر المستخدم',
+        bannedUsers: 'المستخدمون المحظورون',
+        restarting: 'جاري إعادة تشغيل الاتصال...',
+        historyLimit: 'يتم حفظ لقطات الشاشة لآخر 30 شخصًا فقط',
+        emptyHistory: 'السجل فارغ',
+        connectToStart: 'اتصل بالشركاء لبدء التسجيل',
+        zero: '0 إدخالات',
+        entry: 'إدخال',
+        entries: 'إدخالات',
+        ip: 'IP',
+        city: 'المدينة',
+        region: 'المنطقة',
+        country: 'البلد',
+        coordinates: 'الإحداثيات',
+        time: 'الوقت',
+        photoNotAvailable: 'الصورة لم تعد متوفرة',
+        skip25Msg: "تمت مقابلة هذا الشخص منذ أكثر من 30 تخطي!",
+        banListTitle: 'قائمة الحظر',
+        screenshot: 'لقطة الشاشة',
+        actions: 'إجراءات',
+        bannedListEmpty: 'قائمة الحظر فارغة',
+        videoModeSuggestion: 'بدّل إلى وضع الفيديو لاستخدام ChillTools',
+        textModeNotSupported: 'وضع النص غير مدعوم!',
+        betaWelcome: 'مرحبًا بكم، مختبِر النسخة التجريبية!',
+        outdatedExtension: 'الامتداد قديم!',
+        userStyles: 'أنماط المستخدم',
+        userStylesDesc: 'تخصيص مظهر الموقع والامتداد باستخدام CSS مخصص',
+        customCSS: 'CSS مخصص',
+        reset: 'إعادة تعيين',
+        save: 'حفظ',
+        gallery: 'معرض',
+        userStyleActive: 'UserStyle نشطة. الألوان المخصصة معطلة.',
+        disableUserStyle: 'عطل UserStyle لاستخدام الألوان المخصصة.',
+        galleryDesc: 'اختر من الأنماط الجاهزة',
+        applyStyle: 'تطبيق',
+        darkMode: 'Better DarkMode',
+        fstool: 'FsTool',
+        stylesReset: 'تم إعادة تعيين الأنماط المخصصة',
+        stylesSaved: 'تم حفظ الأنماط المخصصة بنجاح!',
+        styleApplied: 'تم التطبيق!',
+        omegle: 'Omegle Style',
+        pauseButton: 'إيقاف مؤقت',
+        countryFilter: 'تصفية البلد',
+        countryFilterDesc: 'حدد البلدان للاتصال بها',
+        selectCountries: 'اختر البلدان',
+        noCountriesSelected: 'لم يتم اختيار أي بلد - جميع البلدان مسموح بها',
+        countriesSelected: 'البلدان المحددة',
+        peopleEncountered: 'الأشخاص الذين قابلتهم',
+        saveButtonChoice: 'حفظ اختيار الأزرار',
+        persistent: 'مستمر',
+        persistentTooltip: 'حفظ آخر اختيار تم على الأزرار',
+        showIp: 'عرض IP',
+        showIpTooltip: 'إظهار/إخفاء مربع IP',
+        statistics: 'إحصائيات',
+        donate: 'تبرع',
+        statisticsTitle: 'إحصائيات الاستخدام',
+        totalTimeSpent: 'إجمالي الوقت المستغرق',
+        skips: 'تخطي',
+        enterIpToBlock: 'أدخل IP للحظر',
+        blockIp: 'حظر IP',
+        reviewTitle: 'هل تستمتع بـ ChillTool\'s؟',
+        reviewBody: 'إذا أعجبك، يرجى ترك تقييم 5 نجوم. هذا يساعدنا كثيرًا!',
+        reviewLater: 'ربما لاحقًا',
+        reviewOk: 'موافق',
+        countryLeaderboardBtn: 'تصنيف الدول',
+        countryLeaderboardTitle: 'تصنيف الدول',
+        countryLeaderboardTotalCountries: 'إجمالي الدول التي تمت مقابلتها:',
+        countryLeaderboardNoData: 'لا توجد بيانات',
+        countryLeaderboardClear: 'مسح التصنيف',
+        noteMaxChars: 'الحد الأقصى 50 حرفًا',
+        countryLeaderboardClearConfirm: 'هل تريد مسح تصنيف الدول بالكامل؟'
+    },
+    fr: {
+        settings: 'Paramètres',
+        apply: 'Appliquer',
+        color: 'Couleur',
+        showIpDisplay: 'Afficher la boîte d\'affichage IP',
+        videoBorder: 'Couleur personnalisée',
+        whiteColorNotAllowed: 'La couleur blanche n\'est pas autorisée. Veuillez choisir une couleur différente.',
+        settingsDesc: 'Ici vous pouvez configurer les paramètres de l\'extension',
+        language: 'Langue:',
+        close: 'Fermer',
+        history: 'Historique',
+        ban: 'Bloquer l\'utilisateur',
+        bannedUsers: 'Utilisateurs bloqués',
+        restarting: 'Redémarrage de la connexion...',
+        historyLimit: 'Seules les captures des 30 dernières personnes sont enregistrées',
+        emptyHistory: 'L\'historique est vide',
+        connectToStart: 'Connectez-vous avec des partenaires pour commencer l\'enregistrement',
+        zero: '0 entrées',
+        entry: 'entrée',
+        entries: 'entrées',
+        ip: 'IP',
+        city: 'Ville',
+        region: 'Région',
+        country: 'Pays',
+        coordinates: 'Coordonnées',
+        time: 'Heure',
+        photoNotAvailable: 'La photo n\'est plus disponible',
+        skip25Msg: "CETTE PERSONNE A ÉTÉ RENCONTRÉE IL Y A PLUS DE 30 SAUTS!",
+        banListTitle: 'Liste des Bloqués',
+        screenshot: 'Capture',
+        actions: 'Actions',
+        bannedListEmpty: 'La liste des bloqués est vide',
+        videoModeSuggestion: 'Passez en mode vidéo pour utiliser ChillTools',
+        textModeNotSupported: 'Le mode texte n\'est pas pris en charge !',
+        betaWelcome: 'Bienvenue à bord, testeur bêta !',
+        outdatedExtension: "L'extension est obsolète !",
+        userStyles: 'UserStyles',
+        userStylesDesc: 'Personnalisez l\'apparence du site et de l\'extension avec du CSS personnalisé',
+        customCSS: 'CSS Personnalisé',
+        reset: 'Réinitialiser',
+        save: 'Enregistrer',
+        gallery: 'Galerie',
+        userStyleActive: 'UserStyle est actif. Les couleurs personnalisées sont désactivées.',
+        disableUserStyle: 'Désactivez UserStyle pour utiliser les couleurs personnalisées.',
+        galleryDesc: 'Choisissez parmi les styles prédéfinis',
+        applyStyle: 'Appliquer',
+        darkMode: 'Better DarkMode',
+        fstool: 'FsTool',
+        stylesReset: 'Les styles personnalisés ont été réinitialisés',
+        stylesSaved: 'Styles personnalisés enregistrés avec succès!',
+        styleApplied: 'appliqué!',
+        omegle: 'Omegle Style',
+        pauseButton: 'Pause',
+        countryFilter: 'Filtre de Pays',
+        countryFilterDesc: 'Sélectionnez les pays à connecter',
+        selectCountries: 'Sélectionner les Pays',
+        noCountriesSelected: 'Aucun pays sélectionné - tous les pays autorisés',
+        countriesSelected: 'pays sélectionnés',
+        peopleEncountered: 'Personnes rencontrées',
+        saveButtonChoice: 'Enregistrer le choix des boutons',
+        persistent: 'PERSISTANT',
+        persistentTooltip: 'Enregistre le dernier choix fait sur les boutons',
+        showIp: 'Afficher IP',
+        showIpTooltip: 'Afficher/masquer la boîte IP',
+        statistics: 'Statistiques',
+        donate: 'Faire un don',
+        statisticsTitle: 'Statistiques d\'Utilisation',
+        totalTimeSpent: 'Temps Total Passé',
+        skips: 'Sauts',
+        enterIpToBlock: 'Entrez l\'IP à bloquer',
+        blockIp: 'Bloquer IP',
+        reviewTitle: 'Vous appréciez ChillTool\'s ?',
+        reviewBody: 'Si vous l\'aimez, merci de laisser un avis 5 étoiles. Ça nous aide beaucoup !',
+        reviewLater: 'Plus tard',
+        reviewOk: 'OK',
+        countryLeaderboardBtn: 'Classement des pays',
+        countryLeaderboardTitle: 'Classement des pays',
+        countryLeaderboardTotalCountries: 'Total des pays rencontrés :',
+        countryLeaderboardNoData: 'Aucune donnée',
+        countryLeaderboardClear: 'Effacer le classement',
+        noteMaxChars: 'Maximum 50 caractères',
+        countryLeaderboardClearConfirm: 'Effacer tout le classement des pays ?'
+    },
+    bn: {
+        settings: 'সেটিংস',
+        apply: 'প্রয়োগ করুন',
+        color: 'রঙ',
+        videoBorder: 'কাস্টম রঙ',
+        whiteColorNotAllowed: 'সাদা রং অনুমোদিত নয়। অনুগ্রহ করে একটি ভিন্ন রং নির্বাচন করুন।',
+        settingsDesc: 'এখানে আপনি এক্সটেনশন সেটিংস কনফিগার করতে পারেন',
+        language: 'ভাষা:',
+        showIpDisplay: 'IP দেখানো',
+        statistics: 'পরিসংখ্যান',
+        donate: 'দান করুন',
+        statisticsTitle: 'ব্যবহার পরিসংখ্যান',
+        totalTimeSpent: 'মোট অতিবাহিত সময়',
+        peopleEncountered: 'লোকের সাথে দেখা হয়েছে',
+        skips: 'স্কিপ',
+        close: 'বন্ধ',
+        history: 'ইতিহাস',
+        ban: 'ব্যবহারকারী ব্লক করুন',
+        bannedUsers: 'ব্লক করা ব্যবহারকারীরা',
+        restarting: 'সংযোগ পুনরায় শুরু করা হচ্ছে...',
+        historyLimit: 'শুধুমাত্র শেষ 30 জনের স্ক্রিনশট সংরক্ষণ করা হয়',
+        emptyHistory: 'ইতিহাস খালি',
+        connectToStart: 'রেকর্ডিং শুরু করতে অংশীদারদের সাথে সংযোগ করুন',
+        zero: '0 এন্ট্রি',
+        entry: 'এন্ট্রি',
+        entries: 'এন্ট্রি',
+        ip: 'আইপি',
+        city: 'শহর',
+        region: 'অঞ্চল',
+        country: 'দেশ',
+        coordinates: 'স্থানাঙ্ক',
+        time: 'সময়',
+        photoNotAvailable: 'ছবিটি আর পাওয়া যাচ্ছে না',
+        skip25Msg: "এই ব্যক্তিকে 30 টির বেশি স্কিপ আগে দেখা হয়েছিল!",
+        banListTitle: 'ব্লক তালিকা',
+        screenshot: 'স্ক্রিনশট',
+        actions: 'কার্যকলাপ',
+        bannedListEmpty: 'ব্লক তালিকা খালি',
+        videoModeSuggestion: 'ChillTools ব্যবহার করতে ভিডিও মোডে স্যুইচ করুন',
+        textModeNotSupported: 'টেক্সট মোড সমর্থিত নয়!',
+        betaWelcome: 'স্বাগতম, বেটা পরীক্ষক!',
+        outdatedExtension: 'এক্সটেনশনটি পুরোনো হয়ে গেছে!',
+        userStyles: 'ব্যবহারকারী শৈলী',
+        userStylesDesc: 'কাস্টম CSS দিয়ে সাইট এবং এক্সটেনশনের চেহারা কাস্টমাইজ করুন',
+        customCSS: 'কাস্টম CSS',
+        reset: 'রিসেট করুন',
+        save: 'সংরক্ষণ করুন',
+        gallery: 'গ্যালারি',
+        userStyleActive: 'UserStyle সক্রিয়। কাস্টম রঙ নিষ্ক্রিয়।',
+        disableUserStyle: 'কাস্টম রঙ ব্যবহার করতে UserStyle নিষ্ক্রিয় করুন।',
+        galleryDesc: 'পূর্ব-নির্মিত শৈলী থেকে বেছে নিন',
+        applyStyle: 'প্রয়োগ করুন',
+        darkMode: 'Better DarkMode',
+        fstool: 'FsTool',
+        stylesReset: 'কাস্টম শৈলী রিসেট করা হয়েছে',
+        stylesSaved: 'কাস্টম শৈলী সফলভাবে সংরক্ষিত হয়েছে!',
+        styleApplied: 'প্রয়োগ করা হয়েছে!',
+        omegle: 'Omegle Style',
+        pauseButton: 'থামান',
+        countryFilter: 'দেশ ফিল্টার',
+        countryFilterDesc: 'সংযোগ করার জন্য দেশ নির্বাচন করুন',
+        selectCountries: 'দেশ নির্বাচন করুন',
+        noCountriesSelected: 'কোনো দেশ নির্বাচন করা হয়নি - সব দেশ অনুমোদিত',
+        countriesSelected: 'দেশ নির্বাচিত',
+        saveButtonChoice: 'বোতাম পছন্দ সংরক্ষণ করুন',
+        persistent: 'স্থায়ী',
+        persistentTooltip: 'বাটনে করা শেষ পছন্দটি সংরক্ষণ করুন',
+        showIp: 'আইপি দেখান',
+        showIpTooltip: 'আইপি বক্স দেখান/লুকান',
+        enterIpToBlock: 'ব্লক করতে আইপি লিখুন',
+        blockIp: 'আইপি ব্লক করুন',
+        reviewTitle: 'ChillTool\'s কি ভালো লাগছে?',
+        reviewBody: 'ভালো লাগলে অনুগ্রহ করে ৫‑তারকার রিভিউ দিন। এটি আমাদের খুব সাহায্য করে!',
+        reviewLater: 'পরে হয়তো',
+        reviewOk: 'ঠিক আছে',
+        countryLeaderboardBtn: 'দেশের র‌্যাঙ্কিং',
+        countryLeaderboardTitle: 'দেশের র‌্যাঙ্কিং',
+        countryLeaderboardTotalCountries: 'মোট দেখা দেশ:',
+        countryLeaderboardNoData: 'কোনো তথ্য নেই',
+        countryLeaderboardClear: 'র‌্যাঙ্কিং মুছুন',
+        noteMaxChars: 'সর্বোচ্চ ৫০ অক্ষর',
+        countryLeaderboardClearConfirm: 'পুরো দেশের র‌্যাঙ্কিং মুছে ফেলবেন?'
+    },
+    ru: {
+        settings: 'Настройки',
+        apply: 'Применить',
+        color: 'Цвет',
+        videoBorder: 'Кастомный цвет',
+        whiteColorNotAllowed: 'Белый цвет не разрешен. Пожалуйста, выберите другой цвет.',
+        settingsDesc: 'Здесь вы можете настроить параметры расширения',
+        language: 'Язык:',
+        close: 'Закрыть',
+        showIpDisplay: 'Отображать IP',
+        history: 'История',
+        ban: 'Заблокировать',
+        bannedUsers: 'Заблокированные',
+        restarting: 'Перезапуск соединения...',
+        historyLimit: 'Сохраняются только скриншоты последних 30 человек',
+        emptyHistory: 'История пуста',
+        connectToStart: 'Подключитесь к партнерам, чтобы начать запись',
+        zero: '0 встреч',
+        entry: 'вход',
+        entries: 'входы',
+        ip: 'IP',
+        city: 'Город',
+        region: 'Регион',
+        country: 'Страна',
+        coordinates: 'Координаты',
+        time: 'Время',
+        photoNotAvailable: 'Фотография больше недоступна',
+        skip25Msg: "ЭТОТ ЧЕЛОВЕК БЫЛ ВСТРЕЧЕН БОЛЕЕ 30 SKIPS НАЗАД!",
+        banListTitle: 'Список блокировки',
+        screenshot: 'Скриншот',
+        actions: 'Действия',
+        bannedListEmpty: 'Список блокировки пуст',
+        videoModeSuggestion: 'Переключитесь в видеорежим, чтобы использовать ChillTools',
+        textModeNotSupported: 'Текстовый режим не поддерживается!',
+        betaWelcome: 'Добро пожаловать, бета-тестер!',
+        outdatedExtension: 'Расширение устарело!',
+        userStyles: 'Пользовательские стили',
+        userStylesDesc: 'Настройте внешний вид сайта и расширения с помощью пользовательского CSS',
+        customCSS: 'Пользовательский CSS',
+        reset: 'Сбросить',
+        save: 'Сохранить',
+        gallery: 'Галерея',
+        userStyleActive: 'UserStyle активен. Пользовательские цвета отключены.',
+        disableUserStyle: 'Отключите UserStyle для использования пользовательских цветов.',
+        galleryDesc: 'Выберите из готовых стилей',
+        applyStyle: 'Применить',
+        darkMode: 'Better DarkMode',
+        fstool: 'FsTool',
+        stylesReset: 'Пользовательские стили сброшены',
+        stylesSaved: 'Пользовательские стили успешно сохранены!',
+        styleApplied: 'применено!',
+        omegle: 'Omegle Style',
+        pauseButton: 'Пауза',
+        countryFilter: 'Фильтр стран',
+        countryFilterDesc: 'Выберите страны для подключения',
+        selectCountries: 'Выбрать страны',
+        noCountriesSelected: 'Страны не выбраны - все страны разрешены',
+        countriesSelected: 'стран выбрано',
+        peopleEncountered: 'Встреченные люди',
+        saveButtonChoice: 'Сохранить выбор кнопок',
+        persistent: 'СОХРАНЯТЬ',
+        persistentTooltip: 'Сохраняет последний сделанный выбор кнопок',
+        showIp: 'Показать IP',
+        showIpTooltip: 'Показать/скрыть поле IP',
+        statisticsTitle: 'Статистика использования',
+        statistics: 'Статистика',
+        donate: 'Пожертвовать',
+        totalTimeSpent: 'Общее время',
+        skips: 'Пропуски',
+        enterIpToBlock: 'Введите IP для блокировки',
+        blockIp: 'Заблокировать IP',
+        reviewTitle: 'Нравится ChillTool\'s?',
+        reviewBody: 'Если вам нравится, пожалуйста, оставьте отзыв на 5 звёзд. Это нам очень помогает!',
+        reviewLater: 'Позже',
+        reviewOk: 'ОК',
+        countryLeaderboardBtn: 'Рейтинг стран',
+        countryLeaderboardTitle: 'Рейтинг стран',
+        countryLeaderboardTotalCountries: 'Всего встреченных стран:',
+        countryLeaderboardNoData: 'Нет данных',
+        countryLeaderboardClear: 'Очистить рейтинг',
+        noteMaxChars: 'Максимум 50 символов',
+        countryLeaderboardClearConfirm: 'Очистить весь рейтинг стран?'
+    },
+    pt: {
+        settings: 'Configurações',
+        apply: 'Aplicar',
+        color: 'Cor',
+        videoBorder: 'Cor personalizada',
+        whiteColorNotAllowed: 'A cor branca não é permitida. Por favor, escolha uma cor diferente.',
+        settingsDesc: 'Aqui você pode configurar as configurações da extensão',
+        language: 'Idioma:',
+        showIpDisplay: 'Mostrar IP',
+        close: 'Fechar',
+        history: 'Histórico',
+        ban: 'Bloquear usuário',
+        bannedUsers: 'Usuários bloqueados',
+        restarting: 'Reiniciando conexão...',
+        historyLimit: 'Apenas os screenshots das últimas 30 pessoas são salvos',
+        emptyHistory: 'O histórico está vazio',
+        connectToStart: 'Conecte-se com parceiros para começar a gravar',
+        zero: '0 encontros',
+        entry: 'entrada',
+        entries: 'entradas',
+        ip: 'IP',
+        city: 'Cidade',
+        region: 'Região',
+        country: 'País',
+        coordinates: 'Coordenadas',
+        time: 'Tempo',
+        photoNotAvailable: 'A foto não está mais disponível',
+        skip25Msg: "ESTA PESSOA FOI ENCONTRADA HÁ MAIS DE 30 SKIPS!",
+        banListTitle: 'Lista de Bloqueados',
+        screenshot: 'Captura',
+        actions: 'Ações',
+        bannedListEmpty: 'A lista de bloqueados está vazia',
+        videoModeSuggestion: 'Mude para o modo vídeo para usar o ChillTools',
+        textModeNotSupported: 'O modo texto não é suportado!',
+        betaWelcome: 'Bem-vindo a bordo, testador beta!',
+        outdatedExtension: 'A extensão está desatualizada!',
+        userStyles: 'UserStyles',
+        userStylesDesc: 'Personalize a aparência do site e da extensão com CSS personalizado',
+        customCSS: 'CSS Personalizado',
+        reset: 'Redefinir',
+        save: 'Salvar',
+        gallery: 'Galeria',
+        userStyleActive: 'UserStyle está ativo. Cores personalizadas estão desativadas.',
+        disableUserStyle: 'Desative UserStyle para usar cores personalizadas.',
+        galleryDesc: 'Escolha entre estilos pré-definidos',
+        applyStyle: 'Aplicar',
+        darkMode: 'Better DarkMode',
+        fstool: 'FsTool',
+        stylesReset: 'Estilos personalizados foram redefinidos',
+        stylesSaved: 'Estilos personalizados salvos com sucesso!',
+        styleApplied: 'aplicado!',
+        omegle: 'Omegle Style',
+        pauseButton: 'Pause',
+        countryFilter: 'Filtro de País',
+        countryFilterDesc: 'Selecione países para conectar',
+        selectCountries: 'Selecionar Países',
+        noCountriesSelected: 'Nenhum país selecionado - todos os países permitidos',
+        statisticsTitle: 'Estatísticas de Uso',
+        statistics: 'Estatísticas',
+        donate: 'Doar',
+        totalTimeSpent: 'Tempo Total Gasto',
+        peopleEncountered: 'Pessoas Encontradas',
+        skips: 'Pulos',
+        countriesSelected: 'países selecionados',
+        saveButtonChoice: 'Salvar escolha de botões',
+        persistent: 'PERSISTENTE',
+        persistentTooltip: 'Salva a última escolha feita nos botões',
+        showIp: 'Mostrar IP',
+        showIpTooltip: 'Mostrar/ocultar caixa de IP',
+        enterIpToBlock: 'Digite o IP para bloquear',
+        blockIp: 'Bloquear IP',
+        reviewTitle: 'Gostando do ChillTool\'s?',
+        reviewBody: 'Se você gosta, por favor deixe uma avaliação de 5 estrelas. Isso ajuda muito!',
+        reviewLater: 'Talvez depois',
+        reviewOk: 'OK',
+        countryLeaderboardBtn: 'Ranking de países',
+        countryLeaderboardTitle: 'Ranking de países',
+        countryLeaderboardTotalCountries: 'Total de países encontrados:',
+        countryLeaderboardNoData: 'Sem dados',
+        countryLeaderboardClear: 'Limpar ranking',
+        noteMaxChars: 'Máximo 50 caracteres',
+        countryLeaderboardClearConfirm: 'Limpar todo o ranking de países?'
+    },
+    id: {
+        settings: 'Pengaturan',
+        apply: 'Terapkan',
+        color: 'Warna',
+        peopleEncountered: 'Orang yang Ditemui',
+        videoBorder: 'Warna kustom',
+        whiteColorNotAllowed: 'Warna putih tidak diizinkan. Silakan pilih warna yang berbeda.',
+        settingsDesc: 'Di sini Anda dapat mengonfigurasi pengaturan ekstensi',
+        language: 'Bahasa:',
+        showIpDisplay: 'Tampilkan IP',
+        close: 'Tutup',
+        history: 'Riwayat',
+        ban: 'Blokir pengguna',
+        bannedUsers: 'Pengguna yang diblokir',
+        restarting: 'Memulai ulang koneksi...',
+        historyLimit: 'Hanya screenshot dari 30 orang terakhir yang disimpan',
+        emptyHistory: 'Riwayat kosong',
+        connectToStart: 'Hubungi mitra untuk mulai merekam',
+        zero: '0 entri',
+        entry: 'entri',
+        entries: 'entri',
+        ip: 'IP',
+        city: 'Kota',
+        region: 'Wilayah',
+        country: 'Negara',
+        coordinates: 'Koordinat',
+        time: 'Waktu',
+        photoNotAvailable: 'Foto tidak tersedia lagi',
+        skip25Msg: "ORANG INI DITEMUI LEBIH DARI 30 SKIP YANG LALU!",
+        banListTitle: 'Daftar Blokir',
+        screenshot: 'Screenshot',
+        actions: 'Aksi',
+        bannedListEmpty: 'Daftar blokir kosong',
+        videoModeSuggestion: 'Beralih ke mode video untuk menggunakan ChillTools',
+        textModeNotSupported: 'Mode teks tidak didukung!',
+        betaWelcome: 'Selamat datang, penguji beta!',
+        outdatedExtension: 'Ekstensi sudah usang!',
+        userStyles: 'UserStyles',
+        userStylesDesc: 'Sesuaikan tampilan situs dan ekstensi dengan CSS kustom',
+        customCSS: 'CSS Kustom',
+        reset: 'Atur Ulang',
+        save: 'Simpan',
+        gallery: 'Galeri',
+        userStyleActive: 'UserStyle aktif. Warna kustom dinonaktifkan.',
+        disableUserStyle: 'Nonaktifkan UserStyle untuk menggunakan warna kustom.',
+        galleryDesc: 'Pilih dari gaya yang sudah jadi',
+        applyStyle: 'Terapkan',
+        darkMode: 'Better DarkMode',
+        fstool: 'FsTool',
+        stylesReset: 'Gaya kustom telah direset',
+        stylesSaved: 'Gaya kustom berhasil disimpan!',
+        styleApplied: 'diterapkan!',
+        omegle: 'Omegle Style',
+        pauseButton: 'Jeda',
+        countryFilter: 'Filter Negara',
+        countryFilterDesc: 'Pilih negara untuk terhubung',
+        selectCountries: 'Pilih Negara',
+        noCountriesSelected: 'Tidak ada negara yang dipilih - semua negara diizinkan',
+        countriesSelected: 'negara dipilih',
+        saveButtonChoice: 'Simpan pilihan tombol',
+        persistent: 'PERSISTENT',
+        persistentTooltip: 'Simpan pilihan terakhir yang dibuat pada tombol',
+        showIp: 'Tampilkan IP',
+        showIpTooltip: 'Tampilkan/sembunyikan bidang IP',
+        statistics: 'Statistik',
+        donate: 'Donasi',
+        statisticsTitle: 'Statistik Penggunaan',
+        totalTimeSpent: 'Total Waktu Digunakan',
+        skips: 'Lewati',
+        buttonOn: 'ON',
+        buttonOff: 'OFF',
+        enterIpToBlock: 'Masukkan IP yang akan diblokir',
+        blockIp: 'Blokir IP',
+        reviewTitle: 'Suka dengan ChillTool\'s?',
+        reviewBody: 'Jika Anda suka, mohon beri ulasan 5 bintang. Itu sangat membantu!',
+        reviewLater: 'Mungkin nanti',
+        reviewOk: 'OK',
+        countryLeaderboardBtn: 'Papan peringkat negara',
+        countryLeaderboardTitle: 'Papan peringkat negara',
+        countryLeaderboardTotalCountries: 'Total negara yang ditemui:',
+        countryLeaderboardNoData: 'Tidak ada data',
+        countryLeaderboardClear: 'Hapus papan peringkat',
+        noteMaxChars: 'Maksimal 50 karakter',
+        countryLeaderboardClearConfirm: 'Hapus seluruh papan peringkat negara?'
+    },
+    it: {
+        settings: 'Impostazioni',
+        apply: 'Applica',
+        saveButtonChoice: 'Salva scelta pulsanti',
+        color: 'Colore',
+        videoBorder: 'Colori personalizzati',
+        whiteColorNotAllowed: 'Il colore bianco non è consentito. Si prega di scegliere un colore diverso.',
+        settingsDesc: "Qui puoi configurare le impostazioni dell'estensione",
+        language: 'Lingua:',
+        close: 'Chiudi',
+        showIpDisplay: 'Mostra IP',
+        history: 'Cronologia',
+        ban: 'Blocca utente',
+        bannedUsers: 'Utenti bloccati',
+        restarting: 'Riconnessione in corso...',
+        historyLimit: 'Vengono salvati solo gli screenshot delle ultime 30 persone',
+        emptyHistory: 'La cronologia è vuota',
+        connectToStart: 'Connettiti con i partner per iniziare la registrazione',
+        zero: '0 incontri',
+        entry: 'incontro',
+        entries: 'incontri',
+        ip: 'IP',
+        city: 'Città',
+        region: 'Regione',
+        country: 'Paese',
+        coordinates: 'Coordinate',
+        time: 'Ora',
+        photoNotAvailable: 'La foto non è più disponibile',
+        skip25Msg: "QUESTA PERSONE È STATA INCONTRATA PIU' DI 30 SKIPS FA!",
+        banListTitle: 'Lista Bloccati',
+        screenshot: 'Screenshot',
+        actions: 'Azioni',
+        bannedListEmpty: 'La lista dei bloccati è vuota',
+        videoModeSuggestion: 'Passa alla modalità video per usare ChillTools',
+        textModeNotSupported: 'La modalità testo non è supportata!',
+        betaWelcome: 'Benvenuto a bordo, beta tester!',
+        outdatedExtension: "L'estensione non è aggiornata!",
+        userStyles: 'UserStyles',
+        userStylesDesc: 'Personalizza l\'aspetto del sito e dell\'estensione con CSS personalizzato',
+        enterIpToBlock: 'Inserisci IP da bloccare',
+        blockIp: 'Blocca IP',
+        customCSS: 'CSS Personalizzato',
+        reset: 'Ripristina',
+        save: 'Salva',
+        gallery: 'Galleria',
+        userStyleActive: 'UserStyle è attivo. I colori personalizzati sono disabilitati.',
+        disableUserStyle: 'Disabilita UserStyle per usare i colori personalizzati.',
+        galleryDesc: 'Scegli tra gli stili predefiniti',
+        applyStyle: 'Applica',
+        darkMode: 'Better DarkMode',
+        fstool: 'FsTool',
+        stylesReset: 'Gli stili personalizzati sono stati ripristinati',
+        stylesSaved: 'Stili personalizzati salvati con successo!',
+        styleApplied: 'applicato!',
+        omegle: 'Omegle Style',
+        pauseButton: 'Pausa',
+        countryFilter: 'Filtro Paese',
+        countryFilterDesc: 'Seleziona i paesi con cui connetterti',
+        selectCountries: 'Seleziona Paesi',
+        noCountriesSelected: 'Nessun paese selezionato - tutti i paesi consentiti',
+        countriesSelected: 'paesi selezionati',
+        persistent: 'PERSISTENTE',
+        persistentTooltip: 'Salva l\'ultima scelta fatta sui pulsanti',
+        showIp: 'Mostra IP',
+        showIpTooltip: 'Mostra/nascondi riquadro IP',
+        statistics: 'Statistiche',
+        donate: 'Dona',
+        statisticsTitle: 'Statistiche di utilizzo',
+        totalTimeSpent: 'Tempo totale trascorso',
+        peopleEncountered: 'Persone incontrate',
+        skips: 'Salti',
+        reviewTitle: "Ti piace ChillTool's?",
+        reviewBody: 'Se ti piace, lascia una recensione da 5 stelle. Aiuta tantissimo!',
+        reviewLater: 'Forse dopo',
+        reviewOk: 'OK',
+        buttonOn: 'ON',
+        buttonOff: 'OFF',
+        countryLeaderboardBtn: 'Classifica paesi',
+        countryLeaderboardTitle: 'Classifica paesi',
+        countryLeaderboardTotalCountries: 'Totale paesi incontrati:',
+        countryLeaderboardNoData: 'Nessun dato',
+        countryLeaderboardClear: 'Cancella classifica',
+        noteMaxChars: 'Massimo 50 caratteri',
+        countryLeaderboardClearConfirm: 'Cancellare l\'intera classifica dei paesi?'
+    },
+};
 
         function compareVersions(a, b) {
             const pa = String(a).split('.').map(n => parseInt(n, 10) || 0);
@@ -1477,18 +2080,26 @@
                                         <th style="padding: 10px; text-align: left;">${t.country}</th>
                                         <th style="padding: 10px; text-align: left;">${t.time}</th>
                                         <th style="padding: 10px; text-align: center;">${t.screenshot}</th>
+                                        <th style="padding: 10px; text-align: left;">Note</th>
                                         <th style="padding: 10px; text-align: center;">${t.actions}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${bannedUsers.map((user, index) => `
-                                        <tr style="background-color: ${index % 2 === 0 ? '#1a1a1a' : '#222'};">
+                                        <tr style="background-color: ${index % 2 === 0 ? '#1a1a1a' : '#222'}; vertical-align: top;">
                                             <td style="padding: 10px; color: #fff;">${user.ip}</td>
                                             <td style="padding: 10px; color: #fff;">${user.info?.city || 'N/A'}</td>
                                             <td style="padding: 10px; color: #fff;">${user.info?.country || 'N/A'}</td>
                                             <td style="padding: 10px; color: #fff;">${user.timestamp}</td>
                                             <td style="padding: 10px; text-align: center;">
                                                 ${user.screenshot ? `<img src="${user.screenshot}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer;" onclick="showScreenshot('${user.screenshot}', {ip: '${user.ip}', timestamp: '${user.timestamp}', info: ${JSON.stringify(user.info)}})">` : 'N/A'}
+                                            </td>
+                                            <td style="padding: 10px;">
+                                                <textarea class="ban-note-input" data-ip="${user.ip}"
+                                                    maxlength="50"
+                                                    placeholder="Add note... (max 50)"
+                                                    style="width: 100%; padding: 4px 8px; background: #333; border: 1px solid #444; border-radius: 4px; color: #fff; font-size: 12px; outline: none; resize: vertical; min-height: 32px; max-height: 120px; overflow-y: auto; box-sizing: border-box; font-family: inherit;"
+                                                >${user.note || ''}</textarea>
                                             </td>
                                             <td style="padding: 10px; text-align: center;">
                                                 <button class="unban-btn" data-ip="${user.ip}" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;"><i class="fas fa-trash-alt"></i></button>
@@ -1503,13 +2114,31 @@
                                 ${t.bannedListEmpty}
                             </div>`}
                     </div>
-                    <div style="padding: 10px; background: #222; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #333; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
-                        chilltools.it
+                    <div style="padding: 10px; background: #222; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #333; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="text" id="manualIpInput" placeholder="${t.enterIpToBlock}" style="padding: 5px 10px; border: 1px solid #444; border-radius: 4px; background: #333; color: #fff; width: 200px;" />
+                            <button id="addManualIpBtn" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                <i class="fas fa-plus"></i> ${t.blockIp}
+                            </button>
+                        </div>
+                        <div>
+                            chilltools.it
+                        </div>
                     </div>
                 </div>
             </div>`;
 
             document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            const bannedModal = document.getElementById('bannedUsersModal');
+            if (bannedModal) {
+                bannedModal.addEventListener('click', (e) => {
+                    if (e.target === bannedModal) {
+                        bannedModal.remove();
+                        unblurToolbar();
+                    }
+                });
+            }
 
             document.getElementById('closeBannedUsers').addEventListener('click', () => {
                 document.getElementById('bannedUsersModal').remove();
@@ -1526,6 +2155,70 @@
                     displayBannedUsers();
                 });
             });
+
+            document.querySelectorAll('.ban-note-input').forEach(input => {
+                let noteWarningShown = false;
+                input.addEventListener('input', function() {
+                    if (this.value.length >= 50 && !noteWarningShown) {
+                        noteWarningShown = true;
+                        const lang = getLang();
+                        const t = translations[lang] || translations['en'];
+                        showNotification('Note', t.noteMaxChars || translations['en'].noteMaxChars || 'Max 50 characters', {
+                            type: 'warning',
+                            duration: 2500
+                        });
+                        setTimeout(() => { noteWarningShown = false; }, 3000);
+                    }
+                    this.style.height = 'auto';
+                    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+                });
+                input.addEventListener('blur', function() {
+                    const ip = this.getAttribute('data-ip');
+                    const note = this.value.trim();
+                    const bannedUsers = getBannedUsers();
+                    const user = bannedUsers.find(u => u.ip === ip);
+                    if (user) {
+                        user.note = note;
+                        saveBannedUsers(bannedUsers);
+                    }
+                });
+            });
+
+            const manualIpInput = document.getElementById('manualIpInput');
+            const addManualIpBtn = document.getElementById('addManualIpBtn');
+
+            if (addManualIpBtn) {
+                addManualIpBtn.addEventListener('click', function() {
+                    const ip = manualIpInput.value.trim();
+                    if (!ip) return;
+
+                    const bannedUsers = getBannedUsers();
+                    
+                    if (bannedUsers.some(user => user.ip === ip)) {
+                        showNotification('Info', 'This IP is already blocked', { type: 'info' });
+                        return;
+                    }
+
+                    bannedUsers.push({
+                        ip: ip,
+                        info: {},
+                        timestamp: new Date().toLocaleString(),
+                        manuallyAdded: true,
+                        note: ''
+                    });
+                    saveBannedUsers(bannedUsers);
+                    
+                    document.getElementById('bannedUsersModal').remove();
+                    displayBannedUsers();
+                    showNotification('Success', 'IP address has been blocked', { type: 'success' });
+                });
+
+                manualIpInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        addManualIpBtn.click();
+                    }
+                });
+            }
         }
 
         function getSelectedCountries() {
@@ -1595,8 +2288,8 @@
                         ${t.countryFilterDesc}
                     </div>
                     <div style="padding: 15px; border-bottom: 1px solid #333;">
-                        <div style="position: relative;">
-                            <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #888; font-size: 14px;"></i>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #888; font-size: 14px; pointer-events: none; z-index: 1;"></i>
                             <input type="text" id="countrySearchInput" placeholder="Search countries..." style="width: 100%; padding: 10px 10px 10px 38px; background: #222; border: 1px solid #444; border-radius: 5px; color: white; font-size: 14px; outline: none;">
                         </div>
                     </div>
@@ -1713,6 +2406,62 @@
             });
         }
 
+        function showTosModal() {
+            const toolbar = document.getElementById('chillToolbar');
+            if (toolbar && !isMobile()) toolbar.classList.add('chill-blur');
+            
+            const lang = getLang();
+            const t = translations[lang];
+            
+            const modal = document.createElement('div');
+            modal.id = 'tosModal';
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(5px); z-index: 9999; display: flex; justify-content: center; align-items: center;';
+            
+            modal.innerHTML = `
+                <div style="background: #111; border-radius: 10px; width: 90%; max-width: 500px; max-height: 80vh; overflow: hidden; box-shadow: 0 5px 25px rgba(0,0,0,0.7); border: 1px solid #333; display: flex; flex-direction: column;">
+                    <div style="padding: 15px; background: linear-gradient(to right, #007bff, #6610f2); color: white; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
+                        <h3 style="margin: 0; font-size: 18px; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
+                            <i class="fas fa-file-contract"></i> ${t.termsOfService || 'Terms of Service'}
+                        </h3>
+                    </div>
+                    <div style="padding: 25px; overflow-y: auto; flex-grow: 1; min-height: 120px; color: #eee; font-size: 16px; line-height: 1.7;">
+                        <p style="margin: 0; font-size: 16px;">${t.usingExtensionTos || 'By using the Extension "ChillTool\'s" you automatically accept the'} <a href="https://chilltools.it/tos/" target="_blank" style="color: #4CAF50; text-decoration: underline; font-weight: 500;">${t.termsOfService || 'Terms of Service'}</a>.</p>
+                    </div>
+                    <div style="padding: 15px; background: #0a0a0a; border-top: 1px solid #333; display: flex; justify-content: flex-end;">
+                        <button id="acceptTos" style="
+                            background: linear-gradient(to right, #4CAF50, #45a049);
+                            color: white;
+                            border: none;
+                            padding: 8px 20px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-weight: bold;
+                            text-transform: uppercase;
+                            font-size: 13px;
+                            transition: all 0.2s;
+                        ">
+                            ${t.accept || 'I Accept'}
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        
+            document.getElementById('acceptTos').addEventListener('click', function() {
+                localStorage.setItem('tosAccepted', 'true');
+                modal.remove();
+                if (toolbar) toolbar.classList.remove('chill-blur');
+            });
+
+
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    e.stopPropagation();
+                }
+            });
+        }
+
         function showSettings() {
             const toolbar = document.getElementById('chillToolbar');
             if (toolbar && !isMobile()) toolbar.classList.add('chill-blur');
@@ -1762,21 +2511,51 @@
                                     <option value="it" ${lang === 'it' ? 'selected' : ''}>Italiano</option>
                                 </select>
 
-                                <div style="display: flex; align-items: center; margin: 8px 0; padding: 8px 12px; border-radius: 6px; background: rgba(255,255,255,0.05);">
-                                    <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 24px; margin-right: 12px;">
-                                        <input type="checkbox" id="showIpDisplayCheckbox" ${isIpDisplayEnabled ? 'checked' : ''} style="opacity: 0; width: 0; height: 0;">
-                                        <span class="slider round" style="
-                                            position: absolute;
+
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin: 8px 0; padding: 8px 12px; border-radius: 6px; background: rgba(255,255,255,0.05);">
+                                    <div style="display: flex; align-items: center;">
+                                        <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 24px; margin-right: 12px;">
+                                            <input type="checkbox" id="showIpDisplayCheckbox" ${isIpDisplayEnabled ? 'checked' : ''} style="opacity: 0; width: 0; height: 0;">
+                                            <span class="slider round"></span>
+                                        </label>
+                                        <label for="showIpDisplayCheckbox" style="
+                                            color: #e0e0e0;
+                                            font-size: 14px;
+                                            font-weight: 500;
                                             cursor: pointer;
-                                            top: 0;
-                                            left: 0;
-                                            right: 0;
-                                            bottom: 0;
-                                            background-color: #333;
-                                            transition: .4s;
-                                            border-radius: 24px;
-                                        "></span>
-                                    </label>
+                                            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+                                            line-height: 1.4;
+                                            margin-right: 20px;
+                                        ">
+                                            ${t.showIpDisplay}
+                                        </label>
+                                        
+                                    </div>
+                                    
+                                    <div style="display: flex; align-items: center; margin-left: 20px;">
+                                        <input type="checkbox" id="saveButtonChoiceCheckbox" ${isSaveButtonChoiceEnabled ? 'checked' : ''} style="display: none;">
+                                        <span style="margin: 0 8px 0 0; color: #e0e0e0; font-size: 14px; font-weight: 500; white-space: nowrap; text-transform: uppercase;">Persistent:</span>
+                                        <button type="button" id="saveButtonToggle" style="
+                                            width: 50px;
+                                            height: 24px;
+                                            border: none;
+                                            border-radius: 12px;
+                                            background: ${isSaveButtonChoiceEnabled ? '#4CAF50' : '#F44336'};
+                                            color: white;
+                                            font-weight: bold;
+                                            font-size: 12px;
+                                            cursor: pointer;
+                                            outline: none;
+                                            position: relative;
+                                            overflow: hidden;
+                                            transition: background-color 0.3s;
+                                            margin-right: 5px;
+                                        ">
+                                            ${isSaveButtonChoiceEnabled ? 'ON' : 'OFF'}
+                                        </button>
+                                        <i class="fas fa-info-circle" style="color: #666; font-size: 14px; cursor: help;" title="toggle if you want to save the last choice made on the button"></i>
+                                    </div>
+                                    
                                     <style>
                                         .slider:before {
                                             position: absolute;
@@ -1790,36 +2569,35 @@
                                             border-radius: 50%;
                                         }
                                         
-                                        #showIpDisplayCheckbox + .slider {
+                                        #showIpDisplayCheckbox + .slider,
+                                        #saveButtonChoiceCheckbox + .slider {
                                             background-color: #444;
                                         }
                                         
-                                        #showIpDisplayCheckbox:checked + .slider:before {
+                                        #showIpDisplayCheckbox:checked + .slider:before,
+                                        #saveButtonChoiceCheckbox:checked + .slider:before {
                                             background-color: white;
                                         }
                                         
-                                        #showIpDisplayCheckbox:checked + .slider {
+                                        #showIpDisplayCheckbox:checked + .slider,
+                                        #saveButtonChoiceCheckbox:checked + .slider {
                                             background-color: #4a90e2;
                                         }
                                         
-                                        #showIpDisplayCheckbox:checked + .slider:before {
+                                        #showIpDisplayCheckbox:checked + .slider:before,
+                                        #saveButtonChoiceCheckbox:checked + .slider:before {
                                             transform: translateX(26px);
                                         }
                                         
-                                        #showIpDisplayCheckbox:focus + .slider {
+                                        #showIpDisplayCheckbox:focus + .slider,
+                                        #saveButtonChoiceCheckbox:focus + .slider {
                                             box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
                                         }
+                                        
+                                        #saveButtonToggle {
+                                            transition: background-color 0.3s;
+                                        }
                                     </style>
-                                    <label for="showIpDisplayCheckbox" style="
-                                        color: #e0e0e0;
-                                        font-size: 14px;
-                                        font-weight: 500;
-                                        cursor: pointer;
-                                        text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-                                        line-height: 1.4;
-                                    ">
-                                        ${t.showIpDisplay}
-                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -1889,6 +2667,50 @@
                                 <i class="fab fa-discord"></i> Discord
                             </a>
                         </div>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <a href="https://buymeacoffee.com/chillspotinc" target="_blank" id="donateBtn" style="
+                                flex: 1;
+                                padding: 12px 15px;
+                                background: #ff6b35;
+                                color: white;
+                                border: none;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                font-size: 14px;
+                                font-weight: 600;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                gap: 8px;
+                                transition: all 0.2s;
+                                text-align: center;
+                                text-decoration: none;
+                            ">
+                                <i class="fas fa-heart"></i>
+                                ${t.donate}
+                            </a>
+                            
+                            <button id="showStatisticsBtn" style="
+                                flex: 1;
+                                padding: 12px 15px;
+                                background: #ad6721;
+                                color: white;
+                                border: none;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                font-size: 14px;
+                                font-weight: 600;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                gap: 8px;
+                                transition: all 0.2s;
+                            ">
+                                <i class="fas fa-chart-bar"></i>
+                                ${t.statistics}
+                            </button>
+                        </div>
                     </div>
                     <div style="padding: 12px; background: #222; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #333; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
                         chilltools.it
@@ -1898,21 +2720,72 @@
             
             document.body.insertAdjacentHTML('beforeend', modalHTML);
             
-            const ipCheckbox = document.getElementById('showIpDisplayCheckbox');
-            ipCheckbox.checked = isIpDisplayEnabled;
-            
-            if (isIpDisplayEnabled) {
-                const ipDisplayBox = document.getElementById('ipDisplayBox');
-                if (ipDisplayBox) {
-                    ipDisplayBox.style.display = 'block';
+            if (isSaveButtonChoiceEnabled) {
+                const savedIpDisplay = localStorage.getItem('ipDisplayEnabled');
+                if (savedIpDisplay !== null) {
+                    isIpDisplayEnabled = savedIpDisplay === 'true';
                 }
             }
             
-            ipCheckbox.addEventListener('change', function(e) {
-                isIpDisplayEnabled = e.target.checked;
+            const initIpDisplayBox = () => {
                 const ipDisplayBox = document.getElementById('ipDisplayBox');
                 if (ipDisplayBox) {
                     ipDisplayBox.style.display = isIpDisplayEnabled ? 'block' : 'none';
+                }
+            };
+            
+            const ipCheckbox = document.getElementById('showIpDisplayCheckbox');
+            if (ipCheckbox) {
+                ipCheckbox.checked = isIpDisplayEnabled;
+                ipCheckbox.dispatchEvent(new Event('change', { bubbles: false }));
+            }
+            initIpDisplayBox();
+            
+            const ipBoxObserver = new MutationObserver(() => {
+                const ipDisplayBox = document.getElementById('ipDisplayBox');
+                if (ipDisplayBox) {
+                    ipDisplayBox.style.display = isIpDisplayEnabled ? 'block' : 'none';
+                    ipBoxObserver.disconnect();
+                }
+            });
+            
+            ipBoxObserver.observe(document.body, { childList: true, subtree: true });
+            
+            if (ipCheckbox) {
+                const handleIpCheckboxChange = function(e) {
+                    isIpDisplayEnabled = e.target.checked;
+                    
+                    if (isSaveButtonChoiceEnabled) {
+                        localStorage.setItem('ipDisplayEnabled', isIpDisplayEnabled);
+                    } else {
+                        localStorage.removeItem('ipDisplayEnabled');
+                    }
+                    
+                    document.querySelectorAll('#ipDisplayBox').forEach(box => {
+                        box.style.display = isIpDisplayEnabled ? 'block' : 'none';
+                    });
+                };
+                
+                ipCheckbox.addEventListener('change', handleIpCheckboxChange);
+            }
+            
+            const saveButtonChoiceCheckbox = document.getElementById('saveButtonChoiceCheckbox');
+            const saveButtonToggle = document.getElementById('saveButtonToggle');
+            saveButtonChoiceCheckbox.checked = isSaveButtonChoiceEnabled;
+            
+            saveButtonToggle.addEventListener('click', function() {
+                isSaveButtonChoiceEnabled = !isSaveButtonChoiceEnabled;
+                saveButtonChoiceCheckbox.checked = isSaveButtonChoiceEnabled;
+                
+                saveButtonToggle.style.background = isSaveButtonChoiceEnabled ? '#4CAF50' : '#F44336';
+                saveButtonToggle.textContent = isSaveButtonChoiceEnabled ? 'ON' : 'OFF';
+                
+                if (isSaveButtonChoiceEnabled) {
+                    localStorage.setItem('saveButtonChoice', 'true');
+                } else {
+                    localStorage.removeItem('saveButtonChoice');
+                    localStorage.removeItem('buttonChoices');
+                    localStorage.removeItem('ipDisplayEnabled');
                 }
             });
             
@@ -1951,7 +2824,7 @@
                 
                 const colorModalHTML = `
                     <div id="colorModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; justify-content: center; align-items: center;">
-                        <div style="background: #111; border-radius: 10px; width: 90%; max-width: 400px; padding: 20px; box-shadow: 0 5px 25px rgba(0,0,0,0.7); border: 1px solid #333;">
+                        <div style="background: #111; border-radius: 10px; width: 90%; max-width: 400px; padding: 20px; box-shadow: 0 5px 25px rgba(0,0,0,0.7); border: 1px solid #333; position: relative;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #333;">
                                 <h3 style="margin: 0; color: #fff; font-size: 18px;">
                                     <i class="fas fa-palette"></i> ${t.color} ${t.settings.toLowerCase()}
@@ -1981,6 +2854,22 @@
                                     ${t.apply}
                                 </button>
                             </div>
+                            
+                            <button id="resetColorBtn" style="
+                                position: absolute;
+                                bottom: 20px;
+                                left: 20px;
+                                background: #dc3545;
+                                color: white;
+                                border: none;
+                                padding: 8px 16px;
+                                border-radius: 5px;
+                                cursor: pointer;
+                                font-size: 14px;
+                                transition: all 0.2s;
+                            " title="${t.reset || 'Reset'}">
+                                <i class="fas fa-undo"></i> ${t.reset || 'Reset'}
+                            </button>
                         </div>
                     </div>`;
 
@@ -2126,6 +3015,29 @@
                     closeColorModal();
                 });
                 
+                document.getElementById('resetColorBtn').addEventListener('click', function() {
+                    localStorage.removeItem('videoBorderColor');
+                    document.cookie = 'videoBorderColor=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                    
+                    const styleElement = document.getElementById('rightBoxStyle');
+                    if (styleElement) {
+                        styleElement.remove();
+                    }
+                    
+                    videoBorderColor.value = '#007bff';
+                    
+                    const lang = getLang();
+                    const t = translations[lang] || translations.en || {};
+                    const message = t.stylesReset || 'Custom styles have been reset';
+                    
+                    showNotification('Color Reset', message, {
+                        type: 'success',
+                        duration: 2000,
+                        pulse: true,
+                        zIndex: 10001 
+                    });
+                });
+                
                 document.addEventListener('keydown', function(e) {
                     if (e.key === 'Escape') {
                         closeColorModal();
@@ -2153,6 +3065,18 @@
                 document.getElementById('settingsModal').remove();
                 unblurToolbar();
             };
+            
+            const settingsModal = document.getElementById('settingsModal');
+            if (settingsModal) {
+                settingsModal.addEventListener('click', (e) => {
+                    if (e.target === settingsModal) {
+                        const selected = document.getElementById('langSelect').value;
+                        localStorage.setItem('chilltool_lang', selected);
+                        settingsModal.remove();
+                        unblurToolbar();
+                    }
+                });
+            }
             
             const savedColor = localStorage.getItem('videoBorderColor') || '#0a0a0b';
             const styleElement = document.getElementById('rightBoxStyle') || document.createElement('style');
@@ -2391,6 +3315,40 @@
                     #historyModal > div > div:first-child h3 i {
                         color: white !important;
                     }
+                    
+                    #statisticsModal > div > div:first-child {
+                        background: linear-gradient(to right, #ff4444, #ff2222) !important;
+                        border-bottom: 1px solid #ff4444 !important;
+                    }
+
+                    #statisticsModal > div > div:first-child h3 {
+                        color: white !important;
+                        text-shadow: -1px -1px 0 #000,
+                                    1px -1px 0 #000,
+                                    -1px 1px 0 #000,
+                                    1px 1px 0 #000 !important;
+                    }
+
+                    #statisticsModal > div > div:first-child h3 i {
+                        color: white !important;
+                    }
+                    
+                    #countryLeaderboardModal > div > div:first-child {
+                        background: linear-gradient(to right, #ff4444, #ff2222) !important;
+                        border-bottom: 1px solid #ff4444 !important;
+                    }
+
+                    #countryLeaderboardModal > div > div:first-child h3 {
+                        color: white !important;
+                        text-shadow: -1px -1px 0 #000,
+                                    1px -1px 0 #000,
+                                    -1px 1px 0 #000,
+                                    1px 1px 0 #000 !important;
+                    }
+
+                    #countryLeaderboardModal > div > div:first-child h3 i {
+                        color: white !important;
+                    }
                         
                     .logoBlock {
                         content: url('https://i.ibb.co/1twjdMVT/logo-4.png') !important;
@@ -2407,8 +3365,24 @@
 
                 } 
 
-                .bottomButton, .mainText  {
+                .bottomButton,
+                .bottomButton.outlined,
+                .bottomButton.new,
+                .bottomButton.skipButton,
+                .bottomButton.noSelect,
+                .bottomButton.outlined.new,
+                .bottomButton.outlined.skipButton,
+                .bottomButton.new.skipButton,
+                .bottomButton.outlined.new.skipButton,
+                .bottomButton.outlined.new.noSelect,
+                .bottomButton.outlined.skipButton.noSelect,
+                .bottomButton.new.skipButton.noSelect,
+                .bottomButton.outlined.new.skipButton.noSelect {
                 background: linear-gradient(to top, #007aff, #339cff) !important;
+                }
+                
+                .mainText, .subText  {
+                color: white !important;
                 }
                 `
             }
@@ -2806,15 +3780,18 @@
         let timerInterval = null;
 
         async function handleNewIP(ip) {
-            if (isHandlingIP || lastHandledIP === ip) {
-                return;
-            }
+            if (!ip || lastHandledIP === ip) return;
+            
+            lastHandledIP = ip;
+            
+            const newCount = incrementPeopleCount();
+            updatePeopleCounter();
+            
+            console.log(`Nuova connessione rilevata: ${ip} (Totale persone: ${newCount})`);
 
             const bannedUsers = getBannedUsers();
             if (bannedUsers.some(user => user.ip === ip)) {
-                console.log(`IP ${ip} is banned. Simulating ESC key.`);
-                isHandlingIP = true;
-                lastHandledIP = ip;
+                console.log(`IP ${ip} è bannato. Simulazione tasto ESC.`);
                 
                 document.dispatchEvent(new KeyboardEvent('keydown', { 
                     key: 'Escape', 
@@ -2879,8 +3856,10 @@
             }
 
             const locationInfo = await getLocation(ip);
-            if (locationInfo) {
-                currentSession.info = locationInfo;
+            if (!locationInfo || currentSession.ip !== ip) return;
+            currentSession.info = locationInfo;
+            incrementLeaderboardForCurrentPartner(ip, locationInfo.country);
+            updateCountryStreak(locationInfo.country);
                 
                 if (timerInterval) {
                     clearInterval(timerInterval);
@@ -2920,18 +3899,16 @@
                     ipBox.innerHTML = `
                     <h3 style='color: #fff; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; margin: 0 0 10px 0;'>ChillTool's</h3>
                     <div style="color: #fff; margin-bottom: 15px;">
-                        <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.ip}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.ip}</span> <br>
+                        <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.ip}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.ip}</span> <span id="copyIpBtn" title="Copy IP" style="cursor:pointer; margin-left:6px; opacity:0.8; font-size:11px; user-select:none; background: rgba(128,128,128,0.15); border: 1px solid rgba(128,128,128,0.4); border-radius: 4px; padding: 1px 5px; vertical-align: middle; transition: background 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" onmouseover="this.style.background='rgba(128,128,128,0.3)'" onmouseout="this.style.background='rgba(128,128,128,0.15)'" onclick="navigator.clipboard.writeText('${locationInfo.ip}').then(()=>{ this.textContent='✅'; setTimeout(()=>{ this.textContent='📋'; }, 1500); })">📋</span> <br>
                         <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.city}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.city}</span> <br>
                         <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.region}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.state}</span> <br>
-                        <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.country}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.country}</span> <br>
+                        <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.country}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.country}</span>${getStreakBadgeHtml()} <br>
                         <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">ISP:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.organization}</span> <br>
                         <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.coordinates}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">(${locationInfo.latitude}, ${locationInfo.longitude})</span> <br>
                         <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">Timer:</strong> <span id="callTimer" style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; font-family: monospace;">${initialTime}</span>
                     </div>
                 `;
                 }
-
-            }
 
             const videoElement = document.getElementById('remoteVideo');
             if (videoElement) {
@@ -2978,11 +3955,9 @@
                             bubbles: true 
                         }));
                         
-                        // Check if auto-skipping is not paused
                         const pauseBtn = document.querySelector('.chill-btn.pause-skip');
                         if (!pauseBtn || !pauseBtn.classList.contains('active')) {
                             setTimeout(() => {
-                                // Check again if still not paused when the timeout triggers
                                 if (!pauseBtn || !pauseBtn.classList.contains('active')) {
                                     document.dispatchEvent(new KeyboardEvent('keydown', { 
                                         key: 'Escape', 
@@ -3010,7 +3985,10 @@
                     canvas.width = videoElement.videoWidth;
                     canvas.height = videoElement.videoHeight;
                     const ctx = canvas.getContext('2d');
+                    ctx.translate(canvas.width, 0);
+                    ctx.scale(-1, 1);
                     ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                    ctx.setTransform(1, 0, 0, 1, 0, 0);
                     
                     if (currentSession.ip === ip) {
                         const screenshot = canvas.toDataURL('image/png');
@@ -3117,6 +4095,15 @@
                 </div>
             </div>`;
             document.body.insertAdjacentHTML('beforeend', modalHTML);
+            const historyModal = document.getElementById('historyModal');
+            if (historyModal) {
+                historyModal.addEventListener('click', (e) => {
+                    if (e.target === historyModal) {
+                        document.getElementById('historyModal').remove();
+                        isHistoryVisible = false;
+                    }
+                });
+            }
             document.querySelectorAll('.history-entry').forEach(entry => {
                 if(entry.classList.contains('history-entry-disabled')) return;
                 entry.addEventListener('click', function() {
@@ -3126,7 +4113,8 @@
                     const historyItem = connectionHistory.find(item => item.ip === ip);
                     if (historyItem) {
                         if (hasScreenshot) {
-                            showScreenshot(screenshot, historyItem);
+                            const entryIndex = connectionHistory.findIndex(item => item.ip === historyItem.ip && item.timestamp === historyItem.timestamp);
+                            showScreenshot(screenshot, historyItem, entryIndex);
                         } else if(historyItem.hasScreenshot) {
                             alert(t.photoNotAvailable + "\n\n" + t.skip25Msg);
                         } else {
@@ -3142,17 +4130,58 @@
             });
         }
 
-        function showScreenshot(screenshot, entry) {
+        function downloadImage(imageSrc, fileName) {
+            const link = document.createElement('a');
+            link.href = imageSrc;
+            link.download = fileName || 'screenshot.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function showScreenshot(screenshot, entry, entryIndex = null) {
             const toolbar = document.getElementById('chillToolbar');
             if (toolbar && !isMobile()) toolbar.classList.add('chill-blur');
             const lang = getLang();
             const t = translations[lang];
             const info = entry.info || {};
+            
+            if (entryIndex === null) {
+                entryIndex = connectionHistory.findIndex(item => item.ip === entry.ip && item.timestamp === entry.timestamp);
+            }
             const modalHTML = `
             <div id="screenshotModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; justify-content: center; align-items: center;">
                 <div style="background: #1a1a1a; border-radius: 10px; width: 90%; max-width: 500px; padding: 20px; box-shadow: 0 5px 25px rgba(0,0,0,0.8); border: 1px solid #333;">
-                    <div style="max-height: 60vh; overflow: hidden; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; background: #000; border-radius: 5px;">
-                        <img src="${screenshot}" style="max-width: 100%; max-height: 60vh; display: block;">
+                    <div style="position: relative;">
+                        <button id="nextScreenshotBtn" style="position: absolute; top: 50%; left: 10px; transform: translateY(-50%); background: rgba(0,0,0,0.7); color: white; border: 1px solid #4dabf7; border-radius: 50%; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 10001; transition: all 0.2s;"
+                                onmouseover="this.style.background='#4dabf7'"
+                                onmouseout="this.style.background='rgba(0,0,0,0.7)'"
+                                title="${t.next || 'Next'}">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button id="prevScreenshotBtn" style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); background: rgba(0,0,0,0.7); color: white; border: 1px solid #4dabf7; border-radius: 50%; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 10001; transition: all 0.2s;"
+                                onmouseover="this.style.background='#4dabf7'"
+                                onmouseout="this.style.background='rgba(0,0,0,0.7)'"
+                                title="${t.previous || 'Previous'}">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+
+                        <button id="blockUserBtn" style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; border: 1px solid #dc3545; border-radius: 5px; padding: 5px 10px; cursor: pointer; z-index: 10001; transition: all 0.2s;"
+                                onmouseover="this.style.background='#dc3545'"
+                                onmouseout="this.style.background='rgba(0,0,0,0.7)'"
+                                title="${t.blockUser || 'Block User'}">
+                            <i class="fas fa-ban"></i>
+                        </button>
+
+                        <button id="downloadScreenshotBtn" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; border: 1px solid #4dabf7; border-radius: 5px; padding: 5px 10px; cursor: pointer; z-index: 10001; transition: all 0.2s;" 
+                                onmouseover="this.style.background='#4dabf7'" 
+                                onmouseout="this.style.background='rgba(0,0,0,0.7)'"
+                                title="${t.download || 'Download'}">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <div style="max-height: 60vh; overflow: hidden; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; background: #000; border-radius: 5px;">
+                            <img id="screenshotImage" src="${screenshot}" style="max-width: 100%; max-height: 60vh; display: block;">
+                        </div>
                     </div>
                     <div class="history-text" style="color: white; margin-bottom: 15px;">
                         <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.ip}:</span> <span style="user-select: all;">${entry.ip}</span></div>
@@ -3162,12 +4191,188 @@
                         <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.country}:</span> ${info.country || '-'}</div>
                         <div><span style="color: #4dabf7; font-weight: bold;">${t.coordinates}:</span> (${info.latitude || '-'}, ${info.longitude || '-'})</div>
                     </div>
-                    <button onclick="document.getElementById('screenshotModal').remove()" style="background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; width: 100%; transition: background 0.2s;" onmouseover="this.style.background='#0069d9'" onmouseout="this.style.background='#007bff'">
-                        <i class="fas fa-times"></i> ${t.close}
+                    <button onclick="document.getElementById('screenshotModal').remove()" style="background: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; width: 100%; transition: background 0.2s;" 
+                            onmouseover="this.style.background='#c82333'" 
+                            onmouseout="this.style.background='#dc3545'">
+                        <i class="fas fa-times"></i> ${t.close || 'Close'}
                     </button>
                 </div>
             </div>`;
+            
             document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            const modalElement = document.getElementById('screenshotModal');
+            const blockUserBtn = document.getElementById('blockUserBtn');
+            const prevBtn = document.getElementById('prevScreenshotBtn');
+            const nextBtn = document.getElementById('nextScreenshotBtn');
+            
+            if (entryIndex <= 0) {
+                prevBtn.style.display = 'none';  
+            } else {
+                prevBtn.style.display = 'flex';  
+            }
+            
+            if (entryIndex >= connectionHistory.length - 1) {
+                nextBtn.style.display = 'none';  
+            } else {
+                nextBtn.style.display = 'flex';  
+            }
+            
+            const navigateScreenshot = (direction) => {
+                const newIndex = entryIndex + direction;
+                if (newIndex >= 0 && newIndex < connectionHistory.length) {
+                    const newEntry = connectionHistory[newIndex];
+                    if (newEntry.hasScreenshot) {
+                        modalElement.remove();
+                        showScreenshot(newEntry.screenshot, newEntry, newIndex);
+                    }
+                }
+            };
+            
+            if (prevBtn) {
+                prevBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    navigateScreenshot(-1);
+                });
+            }
+            
+            if (nextBtn) {
+                nextBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    navigateScreenshot(1);
+                });
+            }
+            
+            const handleKeyDown = (e) => {
+                if (e.key === 'ArrowLeft' && entryIndex > 0) {
+                    navigateScreenshot(-1); 
+                } else if (e.key === 'ArrowRight' && entryIndex < connectionHistory.length - 1) {
+                    navigateScreenshot(1);
+                } else if (e.key === 'Escape') {
+                    modalElement.remove();
+                    document.removeEventListener('keydown', handleKeyDown);
+                }
+            };
+            
+            document.addEventListener('keydown', handleKeyDown);
+            
+            modalElement.addEventListener('click', (e) => {
+                if (e.target === modalElement) {
+                    document.removeEventListener('keydown', handleKeyDown);
+                }
+            });
+            if (blockUserBtn) {
+                blockUserBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    
+                    const bannedUsers = getBannedUsers();
+                    const isAlreadyBanned = bannedUsers.some(user => user.ip === entry.ip);
+                    
+                    if (isAlreadyBanned) {
+                        showNotification('Info', 'This user is already blocked', { type: 'info' });
+                        return;
+                    }
+                    
+                    bannedUsers.push({
+                        ip: entry.ip,
+                        info: info,
+                        timestamp: entry.timestamp,
+                        screenshot: screenshot,
+                        note: ''
+                    });
+                    saveBannedUsers(bannedUsers);
+                    showNotification('Success', 'User has been blocked', { type: 'success' });
+                    const modal = document.getElementById('screenshotModal');
+                    if (modal) {
+                        document.removeEventListener('keydown', handleKeyDown);
+                        modal.remove();
+                    }
+                    unblurToolbar();
+                });
+            }
+            
+            const downloadBtn = document.getElementById('downloadScreenshotBtn');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        
+                        ctx.drawImage(img, 0, 0);
+                        
+                        const logoUrl = isUmingle ? 'https://i.ibb.co/xS4xFRrS/Frame.png' : 'https://i.ibb.co/KcvKXzxK/logo.png';
+                        const chilltoolsLogoUrl = 'https://i.ibb.co/zTS0gP0G/logo-chilltools.png';
+                        
+                        let logosProcessed = 0;
+                        const processLogos = () => {
+                            logosProcessed++;
+                            if (logosProcessed === 2) {
+                                canvas.toBlob(function(blob) {
+                                    const url = URL.createObjectURL(blob);
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    
+                                    const randomId = Math.floor(1000000000 + Math.random() * 9000000000);
+                                    const fileName = `chilltools_${entry.ip}_${randomId}.png`;
+                                    
+                                    link.download = fileName;
+                                    link.setAttribute('data-author', "chilltool's");
+                                    
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                    
+                                    URL.revokeObjectURL(url);
+                                }, 'image/png');
+                            }
+                        };
+                        
+                        const logo = new Image();
+                        logo.crossOrigin = 'anonymous';
+                        logo.onload = function() {
+                            try {
+                                const logoWidth = Math.min(img.width * 0.35, 180);
+                                const logoHeight = (logoWidth / logo.width) * logo.height;
+                                const logoX = 10;
+                                const logoY = img.height - logoHeight - 10;
+                                ctx.globalAlpha = 0.6;
+                                ctx.drawImage(logo, logoX, logoY, logoWidth, logoHeight);
+                                ctx.globalAlpha = 1.0;
+                            } catch(e) { console.log('Logo draw failed'); }
+                            processLogos();
+                        };
+                        logo.onerror = processLogos;
+                        logo.src = logoUrl;
+                        
+                        const chilltoolsLogo = new Image();
+                        chilltoolsLogo.crossOrigin = 'anonymous';
+                        chilltoolsLogo.onload = function() {
+                            try {
+                                const chillLogoWidth = Math.min(img.width * 0.08, 50);
+                                const chillLogoHeight = (chillLogoWidth / chilltoolsLogo.width) * chilltoolsLogo.height;
+                                const chillLogoX = img.width - chillLogoWidth - 10;
+                                const chillLogoY = img.height - chillLogoHeight - 10;
+                                ctx.globalAlpha = 0.6;
+                                ctx.drawImage(chilltoolsLogo, chillLogoX, chillLogoY, chillLogoWidth, chillLogoHeight);
+                                ctx.globalAlpha = 1.0;
+                            } catch(e) { console.log('ChillTools logo draw failed'); }
+                            processLogos();
+                        };
+                        chilltoolsLogo.onerror = processLogos;
+                        chilltoolsLogo.src = chilltoolsLogoUrl;
+                    };
+                    img.crossOrigin = 'anonymous';
+                    img.src = screenshot;
+                });
+            }
         }
 
         function showInfoWithoutScreenshot(entry) {
@@ -3323,10 +4528,27 @@ const replaceLogo = () => {
             }
         };
 
+        function checkAndShowTos() {
+            const tosAccepted = localStorage.getItem('tosAccepted') === 'true';
+            if (!tosAccepted) {
+                showTosModal();
+            }
+        }
+
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', function() {
+            updateToolbarVisibility();
+            
+            window.addEventListener('popstate', updateToolbarVisibility);
+
+            const observer = new MutationObserver(updateToolbarVisibility);
+            observer.observe(document.documentElement, { childList: true, subtree: true });
+                init();
+                checkAndShowTos();
+            });
         } else {
             init();
+            checkAndShowTos();
         }
         let escTimes = [];
         const skipPauseBtn = document.createElement("button");
@@ -3334,7 +4556,81 @@ const replaceLogo = () => {
         const existingToolbar = document.getElementById('chillToolbar');
         let isPauseActive = true;
 
-        if (existingToolbar) {
+        const attachPauseButtonToRemoteVideo = () => {
+            const remoteVideoContainer = document.querySelector('.videoContainer.remote.noSelect') || document.querySelector('.videoContainer.remote');
+            if (!remoteVideoContainer) return false;
+
+            const containerStyle = window.getComputedStyle(remoteVideoContainer);
+            if (containerStyle.position === 'static') {
+                remoteVideoContainer.style.position = 'relative';
+            }
+
+            if (!remoteVideoContainer.contains(skipPauseBtn)) {
+                remoteVideoContainer.appendChild(skipPauseBtn);
+            }
+            return true;
+        };
+
+        const attachBanButtonToRemoteVideo = () => {
+            const banBtn = document.getElementById('chillBanBtn');
+            if (!banBtn) return false;
+
+            const remoteVideoContainer = document.querySelector('.videoContainer.remote.noSelect') || document.querySelector('.videoContainer.remote');
+            if (!remoteVideoContainer) return false;
+
+            const containerStyle = window.getComputedStyle(remoteVideoContainer);
+            if (containerStyle.position === 'static') {
+                remoteVideoContainer.style.position = 'relative';
+            }
+
+            if (!remoteVideoContainer.contains(banBtn)) {
+                remoteVideoContainer.appendChild(banBtn);
+            }
+
+            banBtn.style.position = 'absolute';
+            if (isMobile()) {
+                banBtn.style.top = 'auto';
+                banBtn.style.bottom = '5px';
+
+                const reportBtn =
+                    remoteVideoContainer.querySelector('img.report.onVideoButton.reportButton') ||
+                    remoteVideoContainer.querySelector('img.reportButton') ||
+                    remoteVideoContainer.querySelector('.reportButton') ||
+                    remoteVideoContainer.querySelector('img[alt="Report"]');
+
+                let rightOffset = 10;
+                if (reportBtn) {
+                    const reportRect = reportBtn.getBoundingClientRect();
+                    const reportWidth = Number.isFinite(reportRect.width) && reportRect.width > 0 ? reportRect.width : 32;
+                    const gapToReport = 0;
+                    rightOffset = 10 + reportWidth + gapToReport;
+
+                    const reportHeight = Number.isFinite(reportRect.height) && reportRect.height > 0 ? reportRect.height : reportWidth;
+                    const scale = 0.9;
+                    banBtn.style.width = `${reportWidth * scale}px`;
+                    banBtn.style.height = `${reportHeight * scale}px`;
+                    banBtn.style.transform = 'scale(0.9)';
+                    banBtn.style.padding = '0';
+                    banBtn.style.display = 'flex';
+                    banBtn.style.alignItems = 'center';
+                    banBtn.style.justifyContent = 'center';
+                    banBtn.style.borderRadius = '8px';
+                    banBtn.style.transformOrigin = 'center center';
+                }
+
+                banBtn.style.right = `${rightOffset}px`;
+            } else {
+                banBtn.style.bottom = 'auto';
+                banBtn.style.top = '10px';
+                banBtn.style.right = '10px';
+            }
+            banBtn.style.left = 'auto';
+            banBtn.style.zIndex = '9999';
+
+            return true;
+        };
+
+        if (!attachPauseButtonToRemoteVideo() && existingToolbar) {
             existingToolbar.insertBefore(skipPauseBtn, existingToolbar.firstChild);
         }
 
@@ -3345,7 +4641,19 @@ const replaceLogo = () => {
         skipPauseBtn.style.borderRadius = "5px";
         skipPauseBtn.style.padding = "8px 12px";
         skipPauseBtn.style.cursor = "pointer";
+        skipPauseBtn.style.position = "absolute";
+        skipPauseBtn.style.top = "10px";
+        skipPauseBtn.style.left = "10px";
+        skipPauseBtn.style.zIndex = "9999";
         skipPauseBtn.title = translations[getLang()].pauseButton;
+
+        const pauseButtonAttachObserver = new MutationObserver(() => {
+            attachPauseButtonToRemoteVideo();
+            attachBanButtonToRemoteVideo();
+        });
+        pauseButtonAttachObserver.observe(document.body, { childList: true, subtree: true });
+
+        attachBanButtonToRemoteVideo();
 
         function updatePauseButtonState() {
             const disconnected = !!document.body.innerText.match(/You have disconnected/i);
@@ -3360,19 +4668,79 @@ const replaceLogo = () => {
             }
         }
 
-        skipPauseBtn.onclick = function() {
+        skipPauseBtn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
             if (isPauseActive) {
+                const wasSaveButtonChoiceEnabled = isSaveButtonChoiceEnabled;
+                
+                const originalSaveButtonChoice = isSaveButtonChoiceEnabled;
+                isSaveButtonChoiceEnabled = false;
+                
+                const savedButtonChoice = localStorage.getItem('saveButtonChoice');
+                const savedButtonChoices = localStorage.getItem('buttonChoices');
+                const savedIpDisplay = localStorage.getItem('ipDisplayEnabled');
+                
                 for (let i = 0; i < 5; i++) {
                     setTimeout(() => {
-                        const escEvent = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true });
+                        const escEvent = new KeyboardEvent('keydown', { 
+                            key: 'Escape', 
+                            code: 'Escape', 
+                            keyCode: 27, 
+                            which: 27, 
+                            bubbles: true,
+                            cancelable: true
+                        });
                         document.dispatchEvent(escEvent);
                     }, i * 100);
                 }
+                
+                setTimeout(() => {
+                    isSaveButtonChoiceEnabled = originalSaveButtonChoice;
+                    
+                    if (savedButtonChoice !== null) {
+                        localStorage.setItem('saveButtonChoice', savedButtonChoice);
+                    } else {
+                        localStorage.removeItem('saveButtonChoice');
+                    }
+                    
+                    if (savedButtonChoices !== null) {
+                        localStorage.setItem('buttonChoices', savedButtonChoices);
+                    } else {
+                        localStorage.removeItem('buttonChoices');
+                    }
+                    
+                    if (savedIpDisplay !== null) {
+                        localStorage.setItem('ipDisplayEnabled', savedIpDisplay);
+                    } else {
+                        localStorage.removeItem('ipDisplayEnabled');
+                    }
+                    
+                    const saveButtonToggle = document.getElementById('saveButtonToggle');
+                    if (saveButtonToggle) {
+                        saveButtonToggle.style.background = isSaveButtonChoiceEnabled ? '#4CAF50' : '#F44336';
+                        saveButtonToggle.textContent = isSaveButtonChoiceEnabled ? 'ON' : 'OFF';
+                    }
+                    
+                    const ipDisplayBox = document.getElementById('ipDisplayBox');
+                    if (ipDisplayBox) {
+                        ipDisplayBox.style.display = isIpDisplayEnabled ? 'block' : 'none';
+                    }
+                }, 600);
+                
                 skipPauseBtn.style.background = "#dc3545";
                 skipPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
                 isPauseActive = false;
             } else {
-                const escEvent = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true });
+                const escEvent = new KeyboardEvent('keydown', { 
+                    key: 'Escape', 
+                    code: 'Escape', 
+                    keyCode: 27, 
+                    which: 27, 
+                    bubbles: true,
+                    cancelable: true
+                });
                 document.dispatchEvent(escEvent);
                 skipPauseBtn.style.background = "#28a745";
                 skipPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
@@ -3380,9 +4748,431 @@ const replaceLogo = () => {
             }
         };
 
-        const disconnectObserver = new MutationObserver(updatePauseButtonState);
+        let isPausedDueToDisconnect = false;
+        let disconnectCheckInterval = null;
+        
+        function checkDisconnectStatus() {
+            const disconnectMessage = document.querySelector('.disconnectMessage');
+            const isCurrentlyDisconnected = disconnectMessage !== null && 
+                                         disconnectMessage.textContent.includes('You have disconnected');
+            
+            if (isCurrentlyDisconnected && !isPausedDueToDisconnect) {
+                localStorage.setItem('lastUpdateTime', Math.floor(Date.now() / 1000).toString());
+                isPausedDueToDisconnect = true;
+                console.log('Timer in pausa - Disconnesso');
+            } 
+            else if (!isCurrentlyDisconnected && isPausedDueToDisconnect) {
+                localStorage.setItem('lastUpdateTime', Math.floor(Date.now() / 1000).toString());
+                isPausedDueToDisconnect = false;
+                console.log('Timer ripreso - Connesso');
+            }
+        }
+        
+        disconnectCheckInterval = setInterval(checkDisconnectStatus, 500);
+        
+        const disconnectObserver = new MutationObserver((mutations) => {
+            updatePauseButtonState();
+            checkDisconnectStatus();
+        });
+        
         disconnectObserver.observe(document.body, { childList: true, subtree: true });
         setInterval(updatePauseButtonState, 1000);
+        function formatTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return [
+                hours.toString().padStart(2, '0'),
+                minutes.toString().padStart(2, '0'),
+                secs.toString().padStart(2, '0')
+            ].join(':');
+        }
+
+        function getTimeElapsed() {
+            return parseInt(localStorage.getItem('timeElapsed') || '0');
+        }
+ 
+        function updateTimeElapsed() {
+            const currentTime = Math.floor(Date.now() / 1000);
+            const lastUpdate = parseInt(localStorage.getItem('lastUpdateTime') || currentTime);
+            const timeDiff = currentTime - lastUpdate;
+            
+            const isVideoPage = window.location.pathname.includes('/video');
+            
+            const disconnectSelectors = [
+                '.disconnectMessage', 
+                '.information',
+                'div[style*="text-align: center"]',
+                'div[class*="disconnect"]',
+                'div:contains("You have disconnected")',
+                'div:contains("disconnected")'
+            ];
+            
+            let disconnectMessage = null;
+            for (const selector of disconnectSelectors) {
+                try {
+                    const elements = document.querySelectorAll(selector);
+                    for (const element of elements) {
+                        if (element && (element.textContent.includes('You have disconnected') || 
+                                     element.textContent.includes('disconnected'))) {
+                            disconnectMessage = element;
+                            break;
+                        }
+                    }
+                    if (disconnectMessage) break;
+                } catch (e) {
+                    console.log('Error with selector', selector, e);
+                }
+            }
+            
+            const startButton = document.querySelector('.bottomButton.new.outlined.skipButton.noSelect');
+            const isInStartState = startButton && startButton.querySelector('.mainText')?.textContent === 'Start';
+            
+            const shouldStopTimer = disconnectMessage !== null || isInStartState;
+            
+            console.log('Disconnect message element:', disconnectMessage);
+            if (disconnectMessage) {
+                console.log('Disconnect message content:', disconnectMessage.textContent);
+                console.log('Disconnect message classes:', disconnectMessage.className);
+                console.log('Disconnect message outerHTML:', disconnectMessage.outerHTML);
+            }
+            console.log('Is in start state:', isInStartState);
+            console.log('Should stop timer:', shouldStopTimer);
+            
+            if (isVideoPage && !shouldStopTimer && timeDiff > 0 && timeDiff < 600) {
+                const newTime = getTimeElapsed() + timeDiff;
+                localStorage.setItem('timeElapsed', newTime.toString());
+            }
+            
+            localStorage.setItem('lastUpdateTime', currentTime.toString());
+            
+            const timeDisplay = document.getElementById('timeElapsedDisplay');
+            if (timeDisplay) {
+                const totalSeconds = getTimeElapsed();
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+                timeDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            checkAndMaybePromptReview();
+            
+            return getTimeElapsed();
+        }
+
+        const REVIEW_URL = 'https://chromewebstore.google.com/detail/pdkdjcijjkhhkfdfbdgdfdgobnliphjd/reviews';
+        const REVIEW_SNOOZE_MS = 30 * 24 * 60 * 60 * 1000;
+
+        function showReviewPrompt() {
+            if (document.getElementById('reviewModal')) return;
+
+            const overlay = document.createElement('div');
+            overlay.id = 'reviewModal';
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.background = 'rgba(0,0,0,0.6)';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '10001';
+
+            const box = document.createElement('div');
+            box.style.maxWidth = '560px';
+            box.style.width = '90%';
+            box.style.background = '#111';
+            box.style.color = '#fff';
+            box.style.border = '1px solid #333';
+            box.style.borderRadius = '12px';
+            box.style.boxShadow = '0 10px 30px rgba(0,0,0,0.4)';
+            box.style.padding = '24px';
+            box.style.fontFamily = 'Arial, sans-serif';
+            box.style.textAlign = 'center';
+
+            const title = document.createElement('div');
+            title.style.fontSize = '24px';
+            title.style.fontWeight = '600';
+            title.style.marginBottom = '12px';
+            const lang = typeof getLang === 'function' ? getLang() : (localStorage.getItem('chilltool_lang') || 'en');
+            const t = (typeof translations !== 'undefined' && translations[lang]) ? translations[lang] : translations.en;
+            title.textContent = t.reviewTitle || 'Enjoying ChillTool\'s?';
+
+            const body = document.createElement('div');
+            body.style.fontSize = '16px';
+            body.style.color = '#ddd';
+            body.style.marginBottom = '18px';
+            body.textContent = t.reviewBody || 'If you like it, please leave a 5-star review. It helps a lot!';
+
+            const btnRow = document.createElement('div');
+            btnRow.style.display = 'flex';
+            btnRow.style.gap = '12px';
+            btnRow.style.justifyContent = 'center';
+
+            const later = document.createElement('button');
+            later.type = 'button';
+            later.textContent = t.reviewLater || 'Maybe later';
+            later.style.padding = '12px 18px';
+            later.style.borderRadius = '10px';
+            later.style.border = '1px solid #444';
+            later.style.background = '#222';
+            later.style.color = '#fff';
+            later.style.cursor = 'pointer';
+            later.style.fontSize = '15px';
+
+            const ok = document.createElement('button');
+            ok.type = 'button';
+            ok.textContent = t.reviewOk || 'OK';
+            ok.style.padding = '12px 18px';
+            ok.style.borderRadius = '10px';
+            ok.style.border = '0';
+            ok.style.background = '#2563eb';
+            ok.style.color = '#fff';
+            ok.style.cursor = 'pointer';
+            ok.style.fontSize = '15px';
+
+            btnRow.append(later, ok);
+            box.append(title, body, btnRow);
+            overlay.append(box);
+            document.body.append(overlay);
+
+            later.addEventListener('click', () => {
+                localStorage.setItem('reviewPromptSnoozeUntil', String(Date.now() + REVIEW_SNOOZE_MS));
+                overlay.remove();
+            });
+
+            ok.addEventListener('click', () => {
+                localStorage.setItem('reviewLeft', 'true');
+                overlay.remove();
+                if (window.chrome && chrome.tabs && chrome.tabs.create) {
+                    chrome.tabs.create({ url: REVIEW_URL });
+                } else {
+                    window.open(REVIEW_URL, '_blank', 'noopener');
+                }
+            });
+        }
+
+        function checkAndMaybePromptReview() {
+            if (localStorage.getItem('reviewLeft') === 'true') return;
+            const snoozeUntil = parseInt(localStorage.getItem('reviewPromptSnoozeUntil') || '0', 10);
+            if (Date.now() < snoozeUntil) return;
+            const totalSeconds = getTimeElapsed();
+            if (totalSeconds >= 3600) {
+                showReviewPrompt();
+            }
+        }
+
+        function showStatistics() {
+            const lang = getLang();
+            const t = translations[lang];
+            
+            const statsHTML = `
+            <div id="statisticsModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(5px); z-index: 10000; display: flex; justify-content: center; align-items: center;">
+                <div style="background: #111; border-radius: 10px; width: 90%; max-width: 500px; max-height: 80vh; overflow: hidden; box-shadow: 0 5px 25px rgba(0,0,0,0.7); border: 1px solid #333; display: flex; flex-direction: column;">
+                    <div style="padding: 15px; background: linear-gradient(to right, #8e2de2, #4a00e0); color: white; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
+                        <h3 style="margin: 0; font-size: 18px; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
+                            <i class="fas fa-chart-pie"></i> ${t.statisticsTitle}
+                        </h3>
+                        <button id="closeStatisticsBtn" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 0 10px;">×</button>
+                    </div>
+                    <div style="padding: 20px; overflow-y: auto; flex-grow: 1;">
+                        <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="color: #aaa;"><i class="fas fa-clock"></i> ${t.totalTimeSpent}:</span>
+                                <span style="color: #fff; font-weight: bold;" id="totalTimeStat">${formatTime(getTimeElapsed())}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="color: #aaa;"><i class="fas fa-users"></i> ${t.peopleEncountered}:</span>
+                                <span style="color: #fff; font-weight: bold;" id="peopleCountStat">${getPeopleCount()}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 5px;">
+                                    <span style="color: #aaa;"><i class="fas fa-forward"></i> ${t.skips}:</span>
+                                    <i class="fas fa-info-circle" style="color: #666; cursor: help; font-size: 0.9em;" title="This is the amount of times that you clicked the skip button"></i>
+                                </div>
+                                <span style="color: #fff; font-weight: bold;" id="skipCountStat">${getSkipCount()}</span>
+                            </div>
+                        </div>
+
+                        <button id="openCountryLeaderboardBtn" style="width: 100%; background: #17a2b8; color: white; border: none; border-radius: 8px; padding: 12px 14px; cursor: pointer; font-weight: 700;">
+                            <i class="fas fa-globe"></i> ${(t && (t.countryLeaderboardBtn || (translations.en && translations.en.countryLeaderboardBtn))) || 'Country leaderboard'}
+                        </button>
+                    </div>
+                    <div style="padding: 12px; background: #222; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #333; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
+                        chilltools.it
+                    </div>
+                </div>
+            </div>`;
+            
+            document.body.insertAdjacentHTML('beforeend', statsHTML);
+            
+            const closeModal = function() {
+                clearInterval(timeUpdateInterval);
+                clearInterval(statsUpdateInterval);
+                const modal = document.getElementById('statisticsModal');
+                if (modal) modal.remove();
+            };
+            
+            document.getElementById('closeStatisticsBtn').onclick = closeModal;
+            
+            document.getElementById('statisticsModal').onclick = function(e) {
+                if (e.target === this) closeModal();
+            };
+
+            const leaderboardBtn = document.getElementById('openCountryLeaderboardBtn');
+            if (leaderboardBtn) {
+                leaderboardBtn.onclick = function() {
+                    showCountryLeaderboard();
+                };
+            }
+            
+            const timeUpdateInterval = setInterval(() => {
+                const timeElement = document.getElementById('totalTimeStat');
+                if (timeElement) {
+                    timeElement.textContent = formatTime(getTimeElapsed());
+                }
+            }, 1000);
+
+            const statsUpdateInterval = setInterval(() => {
+                const skipCountElement = document.getElementById('skipCountStat');
+                const peopleCountElement = document.getElementById('peopleCountStat');
+                
+                if (skipCountElement) {
+                    skipCountElement.textContent = getSkipCount();
+                }
+                
+                if (peopleCountElement) {
+                    peopleCountElement.textContent = getPeopleCount();
+                }
+
+                if (!document.getElementById('statisticsModal')) {
+                    clearInterval(timeUpdateInterval);
+                    clearInterval(statsUpdateInterval);
+                }
+            }, 500);
+        }
+
+        let videoTabTimerInterval = null;
+        let videoTabOpenTimeMs = null;
+
+        function createVideoTabTimerDisplay() {
+            if (isMobile()) return null;
+            
+            const existingTimer = document.getElementById('videoTabTimerContainer');
+            if (existingTimer) {
+                existingTimer.remove();
+            }
+
+            const timerContainer = document.createElement('div');
+            timerContainer.id = 'videoTabTimerContainer';
+
+            timerContainer.style.position = 'fixed';
+            timerContainer.style.top = '15px';
+            timerContainer.style.right = '15px';
+            timerContainer.style.zIndex = '9999';
+            timerContainer.style.padding = '8px 15px';
+            timerContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            timerContainer.style.color = 'white';
+            timerContainer.style.borderRadius = '20px';
+            timerContainer.style.fontFamily = 'Arial, sans-serif';
+            timerContainer.style.fontSize = '14px';
+            timerContainer.style.fontWeight = 'bold';
+            timerContainer.style.display = 'flex';
+            timerContainer.style.alignItems = 'center';
+            timerContainer.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
+
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-clock';
+            icon.style.marginRight = '5px';
+            icon.style.fontSize = '16px';
+
+            const timerDisplay = document.createElement('span');
+            timerDisplay.id = 'videoTabTimeElapsedDisplay';
+            timerDisplay.textContent = '00:00:00';
+
+            const infoIcon = document.createElement('i');
+            infoIcon.className = 'fas fa-info-circle';
+            infoIcon.style.marginLeft = '8px';
+            infoIcon.style.fontSize = '12px';
+            infoIcon.style.opacity = '0.85';
+            infoIcon.style.cursor = 'help';
+            infoIcon.title = 'this is the time you have spent on this page only and resets when you refresh or close the page';
+
+            timerContainer.appendChild(icon);
+            timerContainer.appendChild(timerDisplay);
+            timerContainer.appendChild(infoIcon);
+
+            const chatWindow = document.querySelector('.chatWindow') || document.querySelector('.chat-container');
+            if (chatWindow) {
+                timerContainer.style.position = 'absolute';
+                timerContainer.style.top = '10px';
+                timerContainer.style.right = '10px';
+                chatWindow.style.position = 'relative';
+                chatWindow.prepend(timerContainer);
+            } else {
+                document.body.appendChild(timerContainer);
+            }
+
+            return timerContainer;
+        }
+
+        function initVideoTabTimer() {
+            if (isMobile()) return;
+            
+            const isVideoPage = window.location.pathname.includes('/video');
+            if (!isVideoPage) {
+                const existingTimer = document.getElementById('videoTabTimerContainer');
+                if (existingTimer) existingTimer.remove();
+                if (videoTabTimerInterval) {
+                    clearInterval(videoTabTimerInterval);
+                    videoTabTimerInterval = null;
+                }
+                videoTabOpenTimeMs = null;
+                return;
+            }
+
+            videoTabOpenTimeMs = Date.now();
+
+            createVideoTabTimerDisplay();
+
+            const tick = () => {
+                if (!window.location.pathname.includes('/video')) return;
+                if (!videoTabOpenTimeMs) return;
+                const elapsed = Math.max(0, Math.floor((Date.now() - videoTabOpenTimeMs) / 1000));
+
+                const timeDisplay = document.getElementById('videoTabTimeElapsedDisplay');
+                if (timeDisplay) {
+                    timeDisplay.textContent = formatTime(elapsed);
+                } else {
+                    createVideoTabTimerDisplay();
+                }
+            };
+
+            if (videoTabTimerInterval) {
+                clearInterval(videoTabTimerInterval);
+            }
+            videoTabTimerInterval = setInterval(tick, 1000);
+            tick();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initVideoTabTimer);
+        } else {
+            initVideoTabTimer();
+        }
+
+        if (!localStorage.getItem('lastUpdateTime')) {
+            localStorage.setItem('lastUpdateTime', Math.floor(Date.now() / 1000).toString());
+        }
+
+        setInterval(updateTimeElapsed, 1000);
+        
+        updateTimeElapsed();
+        
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'showStatisticsBtn') {
+                showStatistics();
+            }
+        });
+        
         // if you see this message, please donate to support the development of the extension, thx! (Open ticket on discord or use funding.yml)
         // to check if your usage falls under prohibited activities, please visit chilltools.it/legal
         })();
