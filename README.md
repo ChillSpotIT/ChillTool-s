@@ -1,8 +1,8 @@
 # ⚠️ DISCLAIMER
 
-**Beware of imitations / use only the official ChillTool's release.**
---
 **RIGHT NOW CHILLTOOLS IS GETTING DETECTED ON UMINGLE, WE ARE CURRENTLY WORKING TO RESTORE IT AS SOON AS POSSIBLE...**
+--
+**Beware of imitations / use only the official ChillTool's release.**
 --
 ### Disclaimer
 
