@@ -56,3 +56,4 @@ This project is licensed under the [MIT LICENSE](https://github.com/ChillSpotIT/
 Stay up to date with the newest releases for the best possible experience.
 
 **Note:** This project is not affiliated with, endorsed by, or associated with Uhmegle/Umingle or any related platform. All trademarks and platform names are the property of their respective owners.
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ChillSpotIT/ChillTool-s)
