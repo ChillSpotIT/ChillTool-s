@@ -62,7 +62,6 @@
                             const lineRegex = new RegExp("^" + prefix + "=" + salt, "m");
                             sdp = sdp.replace(lineRegex, prefix + "=" + cleanSalt);
                             patched = true;
-                            console.log("[Bypass] Patched " + prefix + ": " + salt + " (v" + vShift + ") -> " + cleanSalt + " (v5)");
                         }
                     }
                     if (patched) {
@@ -71,16 +70,16 @@
                     }
                 }
             } catch (e) {
-                console.error("[Bypass] Packet patch error:", e);
+                // console.error("[Bypass] Packet patch error:", e);
             }
         }
         return originalSend.call(this, finalData);
     };
 
     const patchSiteFunction = () => {
-        if (typeof window._formatTransportData === 'function' && !window._formatTransportData._proxied) {
-            const original = window._formatTransportData;
-            window._formatTransportData = function(offer, pc) {
+        if (typeof window._fTD === 'function' && !window._fTD._proxied) {
+            const original = window._fTD;
+            window._fTD = function(offer, pc) {
                 const result = original.apply(this, arguments);
                 if (result && result.sdp) {
                     const matches = result.sdp.matchAll(/(n?s)=([a-z0-9]{5,})/g);
@@ -91,13 +90,13 @@
                         if (vShift !== 5) {
                             const cleanSalt = (parseInt(salt, 36) - vShift + 5).toString(36);
                             result.sdp = result.sdp.replace(prefix + "=" + salt, prefix + "=" + cleanSalt);
-                            console.log("[Bypass] _formatTransportData cleaned: " + salt + " -> " + cleanSalt);
+                            // console.log("[Bypass] _fTD cleaned: " + salt + " -> " + cleanSalt);
                         }
                     }
                 }
                 return result;
             };
-            window._formatTransportData._proxied = true;
+            window._fTD._proxied = true;
         }
     };
 
