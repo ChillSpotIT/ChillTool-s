@@ -1,8 +1,8 @@
 # ⚠️ DISCLAIMER
 
-Update 2 june 2026:
-New version OUT now**
---
+### Update 2 june 2026:
+- **New version OUT now**
+
 **Beware of imitations / use only the official ChillTool's release.**
 --
 ### Disclaimer
