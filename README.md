@@ -1,9 +1,7 @@
 # ⚠️ DISCLAIMER
 
-**RIGHT NOW CHILLTOOLS IS GETTING DETECTED ON UMINGLE, WE ARE CURRENTLY WORKING TO RESTORE IT AS SOON AS POSSIBLE... 
-
-Update 27 May 2026:
-New version of Chilltools will be available in less then a week!**
+Update 2 june 2026:
+New version OUT now**
 --
 **Beware of imitations / use only the official ChillTool's release.**
 --
