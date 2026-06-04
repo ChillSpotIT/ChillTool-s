@@ -1,7 +1,7 @@
 # Pull Request
 
 ## Title
-feat: modular architecture and enhanced bypass mechanism (v4.0.2)
+feat: modular architecture and enhanced bypass mechanism (v4.0.3)
 
 ## Description
 
@@ -30,7 +30,7 @@ Refactored monolithic codebase into modular architecture with separation of conc
 **Cleanup:**
 - Removed legacy `umingle.js` (5236 lines) in favor of modular structure
 - Added `.gitignore` for development artifacts
-- Version bump to 4.0.2
+- Version bump to 4.0.3
 
 ### Technical Details
 - Manifest V3 compliant

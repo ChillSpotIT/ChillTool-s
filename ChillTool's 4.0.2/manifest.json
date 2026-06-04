@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ChillTool's | IP lookup for umingle",
   "description": "IP lookup and more!",
-  "version": "4.0.2",
+  "version": "4.0.3",
   "icons": {
     "16": "logo/chilltools_16.png",
     "48": "logo/chilltools_48.png",
