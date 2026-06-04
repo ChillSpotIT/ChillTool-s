@@ -1,0 +1,12 @@
+{
+  "name": "chilltools",
+  "version": "4.0.2",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  }
+}
