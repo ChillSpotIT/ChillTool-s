@@ -1,5 +1,4 @@
 let isPausedDueToDisconnect = false;
-let disconnectCheckInterval = null;
 let _checkAndMaybePromptReview = () => {};
 
 export function setReviewCheck(fn) { _checkAndMaybePromptReview = fn; }
@@ -17,11 +16,6 @@ function checkDisconnectStatus() {
         localStorage.setItem('lastUpdateTime', Math.floor(Date.now() / 1000).toString());
         isPausedDueToDisconnect = false;
     }
-}
-
-export function startDisconnectCheck() {
-    if (disconnectCheckInterval) clearInterval(disconnectCheckInterval);
-    disconnectCheckInterval = setInterval(checkDisconnectStatus, 500);
 }
 
 const disconnectObserver = new MutationObserver(() => {
@@ -56,9 +50,7 @@ export function updateTimeElapsed() {
         '.disconnectMessage',
         '.information',
         'div[style*="text-align: center"]',
-        'div[class*="disconnect"]',
-        'div:contains("You have disconnected")',
-        'div:contains("disconnected")'
+        'div[class*="disconnect"]'
     ];
 
     let disconnectMessage = null;

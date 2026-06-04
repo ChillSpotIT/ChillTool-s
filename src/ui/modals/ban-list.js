@@ -1,4 +1,5 @@
 import { getBannedUsers, saveBannedUsers } from '../../features/ban.js';
+import { escapeHtml } from '../../core/dom.js';
 
 let _getLang = () => 'en';
 let _translations = {};
@@ -51,22 +52,22 @@ export function displayBannedUsers() {
                         <tbody>
                             ${bannedUsers.map((user, index) => `
                                 <tr style="background-color: ${index % 2 === 0 ? '#1a1a1a' : '#222'}; vertical-align: top;">
-                                    <td style="padding: 10px; color: #fff;">${user.ip}</td>
-                                    <td style="padding: 10px; color: #fff;">${user.info?.city || 'N/A'}</td>
-                                    <td style="padding: 10px; color: #fff;">${user.info?.country || 'N/A'}</td>
-                                    <td style="padding: 10px; color: #fff;">${user.timestamp}</td>
+                                    <td style="padding: 10px; color: #fff;">${escapeHtml(user.ip)}</td>
+                                    <td style="padding: 10px; color: #fff;">${escapeHtml(user.info?.city) || 'N/A'}</td>
+                                    <td style="padding: 10px; color: #fff;">${escapeHtml(user.info?.country) || 'N/A'}</td>
+                                    <td style="padding: 10px; color: #fff;">${escapeHtml(user.timestamp)}</td>
                                     <td style="padding: 10px; text-align: center;">
-                                        ${user.screenshot ? `<img src="${user.screenshot}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer;" onclick="_showScreenshot('${user.screenshot}', {ip: '${user.ip}', timestamp: '${user.timestamp}', info: ${JSON.stringify(user.info)}})">` : 'N/A'}
+                                        ${user.screenshot ? `<img src="${user.screenshot}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer;" data-screenshot="${user.screenshot}" data-ip="${user.ip}" data-timestamp="${user.timestamp}" data-info="${escapeHtml(JSON.stringify(user.info))}" class="ban-screenshot-btn">` : 'N/A'}
                                     </td>
                                     <td style="padding: 10px;">
-                                        <textarea class="ban-note-input" data-ip="${user.ip}"
+                                        <textarea class="ban-note-input" data-ip="${escapeHtml(user.ip)}"
                                             maxlength="50"
                                             placeholder="Add note... (max 50)"
                                             style="width: 100%; padding: 4px 8px; background: #333; border: 1px solid #444; border-radius: 4px; color: #fff; font-size: 12px; outline: none; resize: vertical; min-height: 32px; max-height: 120px; overflow-y: auto; box-sizing: border-box; font-family: inherit;"
                                         >${user.note || ''}</textarea>
                                     </td>
                                     <td style="padding: 10px; text-align: center;">
-                                        <button class="unban-btn" data-ip="${user.ip}" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;"><i class="fas fa-trash-alt"></i></button>
+                                        <button class="unban-btn" data-ip="${escapeHtml(user.ip)}" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;"><i class="fas fa-trash-alt"></i></button>
                                     </td>
                                 </tr>
                             `).join('')}
@@ -117,6 +118,16 @@ export function displayBannedUsers() {
             saveBannedUsers(bannedUsers);
             document.getElementById('bannedUsersModal').remove();
             displayBannedUsers();
+        });
+    });
+
+    document.querySelectorAll('.ban-screenshot-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const screenshot = this.getAttribute('data-screenshot');
+            const ip = this.getAttribute('data-ip');
+            const timestamp = this.getAttribute('data-timestamp');
+            const info = JSON.parse(this.getAttribute('data-info') || '{}');
+            _showScreenshot(screenshot, { ip, timestamp, info });
         });
     });
 

@@ -6,6 +6,8 @@ let _showScreenshot = () => {};
 let _showInfoWithoutScreenshot = () => {};
 let _isHistoryVisible = false;
 
+import { escapeHtml } from '../../core/dom.js';
+
 export function setDeps(deps) {
     if (deps.getLang) _getLang = deps.getLang;
     if (deps.translations) _translations = deps.translations;
@@ -46,18 +48,18 @@ export function displayHistory() {
                     _connectionHistory.map((entry, index, arr) => {
                         const photoAvailable = index < 30;
                         return `
-                        <div class="history-entry${!photoAvailable ? ' history-entry-disabled' : ''}" style="margin-bottom: 10px; padding: 12px; background: #1a1a1a; border-radius: 5px; transition: all 0.2s; border-left: 4px solid ${entry.hasScreenshot && photoAvailable ? '#007bff' : '#ff4444'};${!photoAvailable ? ' pointer-events: none; opacity: 0.7; cursor: default;' : ' cursor: pointer;'}" data-ip="${entry.ip}" data-has-screenshot="${photoAvailable && entry.hasScreenshot}" data-screenshot="${photoAvailable && entry.hasScreenshot ? (entry.screenshot || '') : ''}">
+                        <div class="history-entry${!photoAvailable ? ' history-entry-disabled' : ''}" style="margin-bottom: 10px; padding: 12px; background: #1a1a1a; border-radius: 5px; transition: all 0.2s; border-left: 4px solid ${entry.hasScreenshot && photoAvailable ? '#007bff' : '#ff4444'};${!photoAvailable ? ' pointer-events: none; opacity: 0.7; cursor: default;' : ' cursor: pointer;'}" data-ip="${escapeHtml(entry.ip)}" data-has-screenshot="${photoAvailable && entry.hasScreenshot}" data-screenshot="${photoAvailable && entry.hasScreenshot ? (entry.screenshot || '') : ''}">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
                                 <div style="flex: 1; min-width: 0;">
-                                    <div class="history-text" style="font-size: 11px; color: #777; margin-bottom: 5px;">${entry.timestamp}</div>
+                                    <div class="history-text" style="font-size: 11px; color: #777; margin-bottom: 5px;">${escapeHtml(entry.timestamp)}</div>
                                     <div>
                                         <span style="color: ${entry.hasScreenshot && photoAvailable ? '#007bff' : '#ff4444'}; margin-right: 8px; text-shadow: none;">
                                             ${arr.length - index}.
                                         </span>
-                                        <span class="history-text" style="font-weight: bold; color: #4dabf7;">${entry.ip}</span>
+                                        <span class="history-text" style="font-weight: bold; color: #4dabf7;">${escapeHtml(entry.ip)}</span>
                                     </div>
                                     <div class="history-text" style="font-size: 13px; color: #aaa; margin-top: 5px;">
-                                        ${entry.info?.city || '-'}, ${entry.info?.region || '-'}, ${entry.info?.country || '-'}
+                                        ${escapeHtml(entry.info?.city) || '-'}, ${escapeHtml(entry.info?.region) || '-'}, ${escapeHtml(entry.info?.country) || '-'}
                                     </div>
                                 </div>
                                 ${entry.hasScreenshot && photoAvailable ?
@@ -120,18 +122,18 @@ export function displayHistory() {
                     _connectionHistory.map((entry, index, arr) => {
                         const photoAvailable = index < 30;
                         return `
-                        <div class="history-entry${!photoAvailable ? ' history-entry-disabled' : ''}" style="margin-bottom: 10px; padding: 12px; background: #1a1a1a; border-radius: 5px; transition: all 0.2s; border-left: 4px solid ${entry.hasScreenshot && photoAvailable ? '#007bff' : '#ff4444'};${!photoAvailable ? ' pointer-events: none; opacity: 0.7; cursor: default;' : ' cursor: pointer;'}" data-ip="${entry.ip}" data-has-screenshot="${photoAvailable && entry.hasScreenshot}" data-screenshot="${photoAvailable && entry.hasScreenshot ? (entry.screenshot || '') : ''}">
+                        <div class="history-entry${!photoAvailable ? ' history-entry-disabled' : ''}" style="margin-bottom: 10px; padding: 12px; background: #1a1a1a; border-radius: 5px; transition: all 0.2s; border-left: 4px solid ${entry.hasScreenshot && photoAvailable ? '#007bff' : '#ff4444'};${!photoAvailable ? ' pointer-events: none; opacity: 0.7; cursor: default;' : ' cursor: pointer;'}" data-ip="${escapeHtml(entry.ip)}" data-has-screenshot="${photoAvailable && entry.hasScreenshot}" data-screenshot="${photoAvailable && entry.hasScreenshot ? (entry.screenshot || '') : ''}">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
                                 <div style="flex: 1; min-width: 0;">
-                                    <div class="history-text" style="font-size: 11px; color: #777; margin-bottom: 5px;">${entry.timestamp}</div>
+                                    <div class="history-text" style="font-size: 11px; color: #777; margin-bottom: 5px;">${escapeHtml(entry.timestamp)}</div>
                                     <div>
                                         <span style="color: ${entry.hasScreenshot && photoAvailable ? '#007bff' : '#ff4444'}; margin-right: 8px; text-shadow: none;">
                                             ${arr.length - index}.
                                         </span>
-                                        <span class="history-text" style="font-weight: bold; color: #4dabf7;">${entry.ip}</span>
+                                        <span class="history-text" style="font-weight: bold; color: #4dabf7;">${escapeHtml(entry.ip)}</span>
                                     </div>
                                     <div class="history-text" style="font-size: 13px; color: #aaa; margin-top: 5px;">
-                                        ${entry.info?.city || '-'}, ${entry.info?.region || '-'}, ${entry.info?.country || '-'}
+                                        ${escapeHtml(entry.info?.city) || '-'}, ${escapeHtml(entry.info?.region) || '-'}, ${escapeHtml(entry.info?.country) || '-'}
                                     </div>
                                 </div>
                                 ${entry.hasScreenshot && photoAvailable ?

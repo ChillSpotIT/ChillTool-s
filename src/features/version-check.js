@@ -63,5 +63,3 @@ export async function checkOutdatedVersion() {
     } catch (e) {
     }
 }
-
-setTimeout(checkOutdatedVersion, 3000);

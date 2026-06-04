@@ -57,10 +57,4 @@ export function setupSkipCounter() {
 
         buttonObserver.observe(document.documentElement, { childList: true, subtree: true });
     }
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' || e.keyCode === 27) {
-
-        }
-    });
 }

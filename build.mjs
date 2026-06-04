@@ -33,11 +33,12 @@ async function run() {
     console.log('Watching for changes...');
   } else {
     await build(buildOptions);
-    // Copy bypass.js as-is (MAIN world, not bundled)
-    cpSync(
-      join(__dirname, "ChillTool's 4.0.2", 'scripts', 'bypass.js'),
-      join(distDir, 'bypass.js')
-    );
+    // Copy bypass.js as-is (MAIN world, not bundled) - skip if already in dist
+    const bypassSrc = join(__dirname, "ChillTool's 4.0.2", 'dist', 'bypass.js');
+    const bypassDest = join(distDir, 'bypass.js');
+    if (bypassSrc !== bypassDest && existsSync(bypassSrc)) {
+      cpSync(bypassSrc, bypassDest);
+    }
     console.log('Build complete → dist/bundle.js + dist/bypass.js');
   }
 }

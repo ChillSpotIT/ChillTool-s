@@ -89,7 +89,8 @@ export function showGalleryModal() {
 
     _insertAdjacentHTMLToBody('beforeend', galleryHTML);
 
-    document.getElementById('userStylesModal').style.display = 'none';
+    const userStylesModal = document.getElementById('userStylesModal');
+    if (userStylesModal) userStylesModal.style.display = 'none';
 
     document.querySelectorAll('.gallery-item').forEach(item => {
         item.addEventListener('mouseenter', function() {
@@ -148,13 +149,15 @@ export function showGalleryModal() {
             });
 
             document.getElementById('galleryModal').remove();
-            document.getElementById('userStylesModal').style.display = 'flex';
+            const usm1 = document.getElementById('userStylesModal');
+            if (usm1) usm1.style.display = 'flex';
         });
     });
 
     document.getElementById('closeGalleryBtn').onclick = function() {
         document.getElementById('galleryModal').remove();
-        document.getElementById('userStylesModal').style.display = 'flex';
+        const usm2 = document.getElementById('userStylesModal');
+        if (usm2) usm2.style.display = 'flex';
     };
 
     document.addEventListener('keydown', function escGalleryHandler(e) {
@@ -162,7 +165,8 @@ export function showGalleryModal() {
             const modal = document.getElementById('galleryModal');
             if (modal) {
                 modal.remove();
-                document.getElementById('userStylesModal').style.display = 'flex';
+                const usm3 = document.getElementById('userStylesModal');
+                if (usm3) usm3.style.display = 'flex';
                 document.removeEventListener('keydown', escGalleryHandler);
             }
         }

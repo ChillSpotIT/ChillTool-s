@@ -3,6 +3,7 @@ let _translations = {};
 let _showNotification = () => {};
 let _insertAdjacentHTMLToBody = () => {};
 let _injectToHead = () => {};
+let _restoreColorObserver = null;
 
 export function setDeps(deps) {
     if (deps.getLang) _getLang = deps.getLang;
@@ -82,6 +83,11 @@ function applyVideoBorderColor(color) {
 }
 
 export function restoreColorStyle() {
+    if (_restoreColorObserver) {
+        _restoreColorObserver.disconnect();
+        _restoreColorObserver = null;
+    }
+
     const savedColor = localStorage.getItem('videoBorderColor') || '#0a0a0b';
     const styleElement = document.getElementById('rightBoxStyle') || document.createElement('style');
     styleElement.id = 'rightBoxStyle';
@@ -116,7 +122,7 @@ export function restoreColorStyle() {
 
     updateStyles();
 
-    const observer = new MutationObserver((mutations) => {
+    _restoreColorObserver = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
             if (mutation.attributeName === 'class') {
                 updateStyles();
@@ -124,7 +130,7 @@ export function restoreColorStyle() {
         });
     });
 
-    observer.observe(document.documentElement, {
+    _restoreColorObserver.observe(document.documentElement, {
         attributes: true,
         attributeFilter: ['class']
     });

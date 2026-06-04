@@ -2,16 +2,17 @@ let _getLang = () => 'en';
 let _translations = {};
 let _insertAdjacentHTMLToBody = () => {};
 let _getSortedCountryLeaderboard = () => ({ entries: [], total: 0 });
+let _resetLeaderboardDedup = () => {};
 
 export function setDeps(deps) {
     if (deps.getLang) _getLang = deps.getLang;
     if (deps.translations) _translations = deps.translations;
     if (deps.insertAdjacentHTMLToBody) _insertAdjacentHTMLToBody = deps.insertAdjacentHTMLToBody;
     if (deps.getSortedCountryLeaderboard) _getSortedCountryLeaderboard = deps.getSortedCountryLeaderboard;
+    if (deps.resetLeaderboardDedup) _resetLeaderboardDedup = deps.resetLeaderboardDedup;
 }
 
 const COUNTRY_LEADERBOARD_STORAGE_KEY = 'countryLeaderboardCounts';
-let lastCountryCountedIP = null;
 
 export function showCountryLeaderboard() {
     const lang = _getLang();
@@ -91,7 +92,7 @@ export function showCountryLeaderboard() {
     if (clearBtn) clearBtn.onclick = function() {
         if (confirm(t.countryLeaderboardClearConfirm || tEn.countryLeaderboardClearConfirm || 'Clear the entire country leaderboard?')) {
             localStorage.removeItem(COUNTRY_LEADERBOARD_STORAGE_KEY);
-            lastCountryCountedIP = null;
+            _resetLeaderboardDedup();
             close();
         }
     };

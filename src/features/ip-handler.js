@@ -1,6 +1,7 @@
 import { getBannedUsers, saveBannedUsers } from './ban.js';
 import { getOrCreateIpBox, getLocation } from './ip-display.js';
 import { getIsIpDisplayEnabled } from '../core/state.js';
+import { escapeHtml } from '../core/dom.js';
 import { captureAndStoreScreenshot, currentSession, connectionHistory } from './screenshot.js';
 import { incrementPeopleCount, updatePeopleCounter } from './people-counter.js';
 import { incrementLeaderboardForCurrentPartner, updateCountryStreak, getStreakBadgeHtml } from './country-leaderboard.js';
@@ -71,7 +72,7 @@ export async function handleNewIP(ip) {
         ipBox.innerHTML = `
         <h3 style='color: #fff; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; margin: 0 0 10px 0;'>ChillTool's</h3>
         <div style="margin-bottom: 10px;">
-            <span style="color: #fff; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.ip}: ${ip} - <i>${t.loading}</i></span>
+            <span style="color: #fff; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.ip}: ${escapeHtml(ip)} - <i>${t.loading}</i></span>
         </div>
     `;
     }
@@ -120,12 +121,12 @@ export async function handleNewIP(ip) {
             ipBox.innerHTML = `
             <h3 style='color: #fff; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; margin: 0 0 10px 0;'>ChillTool's</h3>
             <div style="color: #fff; margin-bottom: 15px;">
-                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.ip}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.ip}</span> <span id="copyIpBtn" title="Copy IP" style="cursor:pointer; margin-left:6px; opacity:0.8; font-size:11px; user-select:none; background: rgba(128,128,128,0.15); border: 1px solid rgba(128,128,128,0.4); border-radius: 4px; padding: 1px 5px; vertical-align: middle; transition: background 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" onmouseover="this.style.background='rgba(128,128,128,0.3)'" onmouseout="this.style.background='rgba(128,128,128,0.15)'" onclick="navigator.clipboard.writeText('${locationInfo.ip}').then(()=>{ this.textContent='✅'; setTimeout(()=>{ this.textContent='📋'; }, 1500); })">📋</span> <br>
-                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.city}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.city}</span> <br>
-                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.region}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.state}</span> <br>
-                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.country}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.country}</span>${getStreakBadgeHtml()} <br>
-                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">ISP:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.organization}</span> <br>
-                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.coordinates}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">(${locationInfo.latitude}, ${locationInfo.longitude})</span> <br>
+                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.ip}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${escapeHtml(locationInfo.ip)}</span> <span id="copyIpBtn" title="Copy IP" style="cursor:pointer; margin-left:6px; opacity:0.8; font-size:11px; user-select:none; background: rgba(128,128,128,0.15); border: 1px solid rgba(128,128,128,0.4); border-radius: 4px; padding: 1px 5px; vertical-align: middle; transition: background 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" onmouseover="this.style.background='rgba(128,128,128,0.3)'" onmouseout="this.style.background='rgba(128,128,128,0.15)'" onclick="navigator.clipboard.writeText('${escapeHtml(locationInfo.ip)}').then(()=>{ this.textContent='✅'; setTimeout(()=>{ this.textContent='📋'; }, 1500); })">📋</span> <br>
+                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.city}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${escapeHtml(locationInfo.city)}</span> <br>
+                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.region}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${escapeHtml(locationInfo.state)}</span> <br>
+                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.country}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${escapeHtml(locationInfo.country)}</span>${getStreakBadgeHtml()} <br>
+                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">ISP:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${escapeHtml(locationInfo.organization)}</span> <br>
+                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.coordinates}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">(${escapeHtml(locationInfo.latitude)}, ${escapeHtml(locationInfo.longitude)})</span> <br>
                 <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">Timer:</strong> <span id="callTimer" style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; font-family: monospace;">${initialTime}</span>
             </div>
         `;

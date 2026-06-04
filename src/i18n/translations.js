@@ -152,7 +152,6 @@ const translations = {
         statisticsTitle: '使用统计',
         totalTimeSpent: '总使用时间',
         skips: '跳过次数',
-        close: '关闭',
         enterIpToBlock: '输入要阻止的IP',
         blockIp: '阻止IP',
         reviewTitle: '喜欢 ChillTool\'s 吗？',

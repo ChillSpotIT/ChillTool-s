@@ -22,7 +22,7 @@ import { showUserStylesModal, setDeps as setUserStylesDeps } from './ui/modals/u
 import { showGalleryModal, setDeps as setGalleryDeps } from './ui/modals/gallery.js';
 import { showStatistics, setDeps as setStatisticsDeps } from './ui/modals/statistics.js';
 import { showTosModal, setDeps as setTosDeps } from './ui/modals/tos.js';
-import { showReviewPrompt, checkAndMaybePromptReview, setGetTimeElapsed as setReviewGetTimeElapsed } from './ui/modals/review-prompt.js';
+import { showReviewPrompt, checkAndMaybePromptReview, setGetTimeElapsed as setReviewGetTimeElapsed, setGetLang as setReviewGetLang } from './ui/modals/review-prompt.js';
 
 // Theme
 import { checkBackgroundColor, setupBackgroundObserver, getChatBoxColor } from './ui/theme/dark-light.js';
@@ -36,7 +36,7 @@ import { captureAndStoreScreenshot, currentSession, connectionHistory } from './
 import { getBannedUsers, saveBannedUsers } from './features/ban.js';
 import { incrementPeopleCount, updatePeopleCounter, getPeopleCount } from './features/people-counter.js';
 import { getSkipCount, setupSkipCounter } from './features/skip-counter.js';
-import { incrementLeaderboardForCurrentPartner, getSortedCountryLeaderboard } from './features/country-leaderboard.js';
+import { incrementLeaderboardForCurrentPartner, getSortedCountryLeaderboard, resetLeaderboardDedup } from './features/country-leaderboard.js';
 import { compareVersions, checkOutdatedVersion, setGetLang as setVersionGetLang } from './features/version-check.js';
 
 // Timer
@@ -48,7 +48,7 @@ import { addLogo, replaceLogo, replaceUmingle, setDeps as setLogoDeps } from './
 
 // ===== SHARED STATE =====
 const translationsRef = translations;
-let currentLang = () => localStorage.getItem('lang') || 'en';
+let currentLang = () => localStorage.getItem('chilltool_lang') || 'en';
 
 // ===== WIRE DEPENDENCIES =====
 
@@ -85,7 +85,7 @@ setSettingsDeps({
 });
 setBanListDeps({ ...commonDeps, showScreenshot });
 setCountryFilterDeps(commonDeps);
-setLeaderboardModalDeps({ ...commonDeps, getSortedCountryLeaderboard });
+setLeaderboardModalDeps({ ...commonDeps, getSortedCountryLeaderboard, resetLeaderboardDedup });
 setHistoryDeps({ ...commonDeps, showScreenshot, showInfoWithoutScreenshot, connectionHistory });
 setScreenshotViewerDeps({
     ...commonDeps,
@@ -101,6 +101,7 @@ setStatisticsDeps({ ...commonDeps, formatTime, getTimeElapsed, getPeopleCount, g
 setTosDeps({ ...commonDeps, injectToBody });
 setColorPickerDeps(commonDeps);
 setReviewGetTimeElapsed(getTimeElapsed);
+setReviewGetLang(currentLang);
 
 // Feature wiring
 setIpDisplayDeps({ getChatBoxColor, checkBackgroundColor });

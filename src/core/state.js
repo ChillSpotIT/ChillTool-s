@@ -25,9 +25,6 @@ export function getCookie(name) {
 
 export const CURRENT_VERSION = '4.0.2';
 export const COUNTRY_LEADERBOARD_STORAGE_KEY = 'countryLeaderboardCounts';
-export let lastCountryCountedIP = null;
-export let currentStreakCountry = null;
-export let currentStreakCount = 0;
 
 export function getIpDisplayPreference() {
     return false;
@@ -36,10 +33,7 @@ export function getIpDisplayPreference() {
 export function setIpDisplayPreference(show) {
     const ipDisplayBox = document.getElementById('ipDisplayBox');
     if (ipDisplayBox) {
-        ipDisplayBox.style.display = show ? 'block' : 'none';
-        if (!show && _isIpDisplayEnabled) {
-            ipDisplayBox.style.display = 'block';
-        }
+        ipDisplayBox.style.display = show ? 'block' : (_isIpDisplayEnabled ? 'block' : 'none');
     }
 }
 

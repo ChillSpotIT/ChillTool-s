@@ -3,6 +3,9 @@ export let connectionHistory = [];
 export const MAX_SCREENSHOTS = 50;
 
 export function captureAndStoreScreenshot(videoElement, ip) {
+    let retryCount = 0;
+    const MAX_RETRIES = 5;
+
     const captureFrame = () => {
         try {
             const canvas = document.createElement('canvas');
@@ -50,7 +53,10 @@ export function captureAndStoreScreenshot(videoElement, ip) {
             }
         } catch (error) {
             console.error('Error capturing screenshot:', error);
-            setTimeout(captureFrame, 500);
+            retryCount++;
+            if (retryCount < MAX_RETRIES) {
+                setTimeout(captureFrame, 500);
+            }
         }
     };
 

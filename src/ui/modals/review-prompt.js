@@ -1,9 +1,13 @@
+import translations from '../../i18n/translations.js';
+
 const REVIEW_URL = 'https://chromewebstore.google.com/detail/pdkdjcijjkhhkfdfbdgdfdgobnliphjd/reviews';
 const REVIEW_SNOOZE_MS = 30 * 24 * 60 * 60 * 1000;
 
 let _getTimeElapsed = () => 0;
+let _getLang = () => localStorage.getItem('chilltool_lang') || 'en';
 
 export function setGetTimeElapsed(fn) { _getTimeElapsed = fn; }
+export function setGetLang(fn) { _getLang = fn; }
 
 export function showReviewPrompt() {
     if (document.getElementById('reviewModal')) return;
@@ -34,8 +38,8 @@ export function showReviewPrompt() {
     title.style.fontSize = '24px';
     title.style.fontWeight = '600';
     title.style.marginBottom = '12px';
-    const lang = typeof getLang === 'function' ? getLang() : (localStorage.getItem('chilltool_lang') || 'en');
-    const t = (typeof translations !== 'undefined' && translations[lang]) ? translations[lang] : translations.en;
+    const lang = _getLang();
+    const t = translations[lang] || translations.en;
     title.textContent = t.reviewTitle || 'Enjoying ChillTool\'s?';
 
     const body = document.createElement('div');

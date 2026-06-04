@@ -152,7 +152,7 @@ export function showWelcomeNotification() {
         'pt': 'ChillTools agora está ativo e pronto para usar!',
         'id': 'ChillTools sekarang aktif dan siap untuk digunakan!',
         'it': 'ChillTools è ora attivo e pronto per essere utilizzato!',
-        'ch': 'ChillTools 现在已激活并准备就绪!'
+        'zh': 'ChillTools 现在已激活并准备就绪!'
     };
 
     const message = welcomeMessages[lang] || welcomeMessages['en'];

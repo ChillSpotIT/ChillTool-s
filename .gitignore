@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Old files
+umingle-old-402.js
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -103,6 +103,10 @@ function getSortedCountryLeaderboard() {
     return { entries, total };
 }
 
+function resetLeaderboardDedup() {
+    lastCountryCountedIP = null;
+}
+
 export {
     safeJsonParse,
     normalizeCountryKey,
@@ -113,5 +117,6 @@ export {
     incrementLeaderboardForCurrentPartner,
     updateCountryStreak,
     getStreakBadgeHtml,
-    getSortedCountryLeaderboard
+    getSortedCountryLeaderboard,
+    resetLeaderboardDedup
 };

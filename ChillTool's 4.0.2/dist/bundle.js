@@ -83,6 +83,11 @@
   function setIsMobile(fn) {
     _isMobile = fn;
   }
+  function escapeHtml(str) {
+    if (str == null)
+      return "";
+    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
 
   // src/core/state.js
   var isSaveButtonChoiceEnabled = localStorage.getItem("saveButtonChoice") === "true";
@@ -114,7 +119,7 @@
   var CURRENT_VERSION = "4.0.2";
 
   // src/i18n/translations.js
-  var translations2 = {
+  var translations = {
     en: {
       showIpDisplay: "Show IP Display",
       settings: "Settings",
@@ -268,7 +273,6 @@
       statisticsTitle: "\u4F7F\u7528\u7EDF\u8BA1",
       totalTimeSpent: "\u603B\u4F7F\u7528\u65F6\u95F4",
       skips: "\u8DF3\u8FC7\u6B21\u6570",
-      close: "\u5173\u95ED",
       enterIpToBlock: "\u8F93\u5165\u8981\u963B\u6B62\u7684IP",
       blockIp: "\u963B\u6B62IP",
       reviewTitle: "\u559C\u6B22 ChillTool's \u5417\uFF1F",
@@ -1034,7 +1038,7 @@
       countryLeaderboardClearConfirm: "Cancellare l'intera classifica dei paesi?"
     }
   };
-  var translations_default = translations2;
+  var translations_default = translations;
 
   // src/ui/styles.js
   function injectCoreStyles() {
@@ -1286,7 +1290,7 @@
       "pt": "ChillTools agora est\xE1 ativo e pronto para usar!",
       "id": "ChillTools sekarang aktif dan siap untuk digunakan!",
       "it": "ChillTools \xE8 ora attivo e pronto per essere utilizzato!",
-      "ch": "ChillTools \u73B0\u5728\u5DF2\u6FC0\u6D3B\u5E76\u51C6\u5907\u5C31\u7EEA!"
+      "zh": "ChillTools \u73B0\u5728\u5DF2\u6FC0\u6D3B\u5E76\u51C6\u5907\u5C31\u7EEA!"
     };
     const message = welcomeMessages[lang] || welcomeMessages["en"];
     showNotification("ChillTools", message, {
@@ -1562,6 +1566,7 @@
   };
   var _injectToHead = () => {
   };
+  var _restoreColorObserver = null;
   function setDeps2(deps) {
     if (deps.getLang)
       _getLang3 = deps.getLang;
@@ -1634,6 +1639,10 @@
     }
   }
   function restoreColorStyle() {
+    if (_restoreColorObserver) {
+      _restoreColorObserver.disconnect();
+      _restoreColorObserver = null;
+    }
     const savedColor = localStorage.getItem("videoBorderColor") || "#0a0a0b";
     const styleElement = document.getElementById("rightBoxStyle") || document.createElement("style");
     styleElement.id = "rightBoxStyle";
@@ -1664,14 +1673,14 @@
       }
     };
     updateStyles();
-    const observer = new MutationObserver((mutations) => {
+    _restoreColorObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.attributeName === "class") {
           updateStyles();
         }
       });
     });
-    observer.observe(document.documentElement, {
+    _restoreColorObserver.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["class"]
     });
@@ -2328,22 +2337,22 @@
                         <tbody>
                             ${bannedUsers.map((user, index) => `
                                 <tr style="background-color: ${index % 2 === 0 ? "#1a1a1a" : "#222"}; vertical-align: top;">
-                                    <td style="padding: 10px; color: #fff;">${user.ip}</td>
-                                    <td style="padding: 10px; color: #fff;">${user.info?.city || "N/A"}</td>
-                                    <td style="padding: 10px; color: #fff;">${user.info?.country || "N/A"}</td>
-                                    <td style="padding: 10px; color: #fff;">${user.timestamp}</td>
+                                    <td style="padding: 10px; color: #fff;">${escapeHtml(user.ip)}</td>
+                                    <td style="padding: 10px; color: #fff;">${escapeHtml(user.info?.city) || "N/A"}</td>
+                                    <td style="padding: 10px; color: #fff;">${escapeHtml(user.info?.country) || "N/A"}</td>
+                                    <td style="padding: 10px; color: #fff;">${escapeHtml(user.timestamp)}</td>
                                     <td style="padding: 10px; text-align: center;">
-                                        ${user.screenshot ? `<img src="${user.screenshot}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer;" onclick="_showScreenshot('${user.screenshot}', {ip: '${user.ip}', timestamp: '${user.timestamp}', info: ${JSON.stringify(user.info)}})">` : "N/A"}
+                                        ${user.screenshot ? `<img src="${user.screenshot}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer;" data-screenshot="${user.screenshot}" data-ip="${user.ip}" data-timestamp="${user.timestamp}" data-info="${escapeHtml(JSON.stringify(user.info))}" class="ban-screenshot-btn">` : "N/A"}
                                     </td>
                                     <td style="padding: 10px;">
-                                        <textarea class="ban-note-input" data-ip="${user.ip}"
+                                        <textarea class="ban-note-input" data-ip="${escapeHtml(user.ip)}"
                                             maxlength="50"
                                             placeholder="Add note... (max 50)"
                                             style="width: 100%; padding: 4px 8px; background: #333; border: 1px solid #444; border-radius: 4px; color: #fff; font-size: 12px; outline: none; resize: vertical; min-height: 32px; max-height: 120px; overflow-y: auto; box-sizing: border-box; font-family: inherit;"
                                         >${user.note || ""}</textarea>
                                     </td>
                                     <td style="padding: 10px; text-align: center;">
-                                        <button class="unban-btn" data-ip="${user.ip}" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;"><i class="fas fa-trash-alt"></i></button>
+                                        <button class="unban-btn" data-ip="${escapeHtml(user.ip)}" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;"><i class="fas fa-trash-alt"></i></button>
                                     </td>
                                 </tr>
                             `).join("")}
@@ -2389,6 +2398,15 @@
         saveBannedUsers(bannedUsers2);
         document.getElementById("bannedUsersModal").remove();
         displayBannedUsers();
+      });
+    });
+    document.querySelectorAll(".ban-screenshot-btn").forEach((btn) => {
+      btn.addEventListener("click", function() {
+        const screenshot = this.getAttribute("data-screenshot");
+        const ip = this.getAttribute("data-ip");
+        const timestamp = this.getAttribute("data-timestamp");
+        const info = JSON.parse(this.getAttribute("data-info") || "{}");
+        _showScreenshot(screenshot, { ip, timestamp, info });
       });
     });
     document.querySelectorAll(".ban-note-input").forEach((input) => {
@@ -2815,6 +2833,8 @@
   var _insertAdjacentHTMLToBody5 = () => {
   };
   var _getSortedCountryLeaderboard = () => ({ entries: [], total: 0 });
+  var _resetLeaderboardDedup = () => {
+  };
   function setDeps6(deps) {
     if (deps.getLang)
       _getLang7 = deps.getLang;
@@ -2824,9 +2844,10 @@
       _insertAdjacentHTMLToBody5 = deps.insertAdjacentHTMLToBody;
     if (deps.getSortedCountryLeaderboard)
       _getSortedCountryLeaderboard = deps.getSortedCountryLeaderboard;
+    if (deps.resetLeaderboardDedup)
+      _resetLeaderboardDedup = deps.resetLeaderboardDedup;
   }
   var COUNTRY_LEADERBOARD_STORAGE_KEY = "countryLeaderboardCounts";
-  var lastCountryCountedIP = null;
   function showCountryLeaderboard() {
     const lang = _getLang7();
     const t = _translations6[lang] || _translations6["en"];
@@ -2898,7 +2919,7 @@
       clearBtn.onclick = function() {
         if (confirm(t.countryLeaderboardClearConfirm || tEn.countryLeaderboardClearConfirm || "Clear the entire country leaderboard?")) {
           localStorage.removeItem(COUNTRY_LEADERBOARD_STORAGE_KEY);
-          lastCountryCountedIP = null;
+          _resetLeaderboardDedup();
           close();
         }
       };
@@ -2961,18 +2982,18 @@
                 ${_connectionHistory.length ? _connectionHistory.map((entry, index, arr) => {
           const photoAvailable = index < 30;
           return `
-                        <div class="history-entry${!photoAvailable ? " history-entry-disabled" : ""}" style="margin-bottom: 10px; padding: 12px; background: #1a1a1a; border-radius: 5px; transition: all 0.2s; border-left: 4px solid ${entry.hasScreenshot && photoAvailable ? "#007bff" : "#ff4444"};${!photoAvailable ? " pointer-events: none; opacity: 0.7; cursor: default;" : " cursor: pointer;"}" data-ip="${entry.ip}" data-has-screenshot="${photoAvailable && entry.hasScreenshot}" data-screenshot="${photoAvailable && entry.hasScreenshot ? entry.screenshot || "" : ""}">
+                        <div class="history-entry${!photoAvailable ? " history-entry-disabled" : ""}" style="margin-bottom: 10px; padding: 12px; background: #1a1a1a; border-radius: 5px; transition: all 0.2s; border-left: 4px solid ${entry.hasScreenshot && photoAvailable ? "#007bff" : "#ff4444"};${!photoAvailable ? " pointer-events: none; opacity: 0.7; cursor: default;" : " cursor: pointer;"}" data-ip="${escapeHtml(entry.ip)}" data-has-screenshot="${photoAvailable && entry.hasScreenshot}" data-screenshot="${photoAvailable && entry.hasScreenshot ? entry.screenshot || "" : ""}">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
                                 <div style="flex: 1; min-width: 0;">
-                                    <div class="history-text" style="font-size: 11px; color: #777; margin-bottom: 5px;">${entry.timestamp}</div>
+                                    <div class="history-text" style="font-size: 11px; color: #777; margin-bottom: 5px;">${escapeHtml(entry.timestamp)}</div>
                                     <div>
                                         <span style="color: ${entry.hasScreenshot && photoAvailable ? "#007bff" : "#ff4444"}; margin-right: 8px; text-shadow: none;">
                                             ${arr.length - index}.
                                         </span>
-                                        <span class="history-text" style="font-weight: bold; color: #4dabf7;">${entry.ip}</span>
+                                        <span class="history-text" style="font-weight: bold; color: #4dabf7;">${escapeHtml(entry.ip)}</span>
                                     </div>
                                     <div class="history-text" style="font-size: 13px; color: #aaa; margin-top: 5px;">
-                                        ${entry.info?.city || "-"}, ${entry.info?.region || "-"}, ${entry.info?.country || "-"}
+                                        ${escapeHtml(entry.info?.city) || "-"}, ${escapeHtml(entry.info?.region) || "-"}, ${escapeHtml(entry.info?.country) || "-"}
                                     </div>
                                 </div>
                                 ${entry.hasScreenshot && photoAvailable ? `<div style="margin-left: 10px; width: 60px; height: 60px; border-radius: 4px; overflow: hidden; border: 1px solid #333; flex-shrink: 0;">
@@ -3029,18 +3050,18 @@
                 ${_connectionHistory.length ? _connectionHistory.map((entry, index, arr) => {
       const photoAvailable = index < 30;
       return `
-                        <div class="history-entry${!photoAvailable ? " history-entry-disabled" : ""}" style="margin-bottom: 10px; padding: 12px; background: #1a1a1a; border-radius: 5px; transition: all 0.2s; border-left: 4px solid ${entry.hasScreenshot && photoAvailable ? "#007bff" : "#ff4444"};${!photoAvailable ? " pointer-events: none; opacity: 0.7; cursor: default;" : " cursor: pointer;"}" data-ip="${entry.ip}" data-has-screenshot="${photoAvailable && entry.hasScreenshot}" data-screenshot="${photoAvailable && entry.hasScreenshot ? entry.screenshot || "" : ""}">
+                        <div class="history-entry${!photoAvailable ? " history-entry-disabled" : ""}" style="margin-bottom: 10px; padding: 12px; background: #1a1a1a; border-radius: 5px; transition: all 0.2s; border-left: 4px solid ${entry.hasScreenshot && photoAvailable ? "#007bff" : "#ff4444"};${!photoAvailable ? " pointer-events: none; opacity: 0.7; cursor: default;" : " cursor: pointer;"}" data-ip="${escapeHtml(entry.ip)}" data-has-screenshot="${photoAvailable && entry.hasScreenshot}" data-screenshot="${photoAvailable && entry.hasScreenshot ? entry.screenshot || "" : ""}">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
                                 <div style="flex: 1; min-width: 0;">
-                                    <div class="history-text" style="font-size: 11px; color: #777; margin-bottom: 5px;">${entry.timestamp}</div>
+                                    <div class="history-text" style="font-size: 11px; color: #777; margin-bottom: 5px;">${escapeHtml(entry.timestamp)}</div>
                                     <div>
                                         <span style="color: ${entry.hasScreenshot && photoAvailable ? "#007bff" : "#ff4444"}; margin-right: 8px; text-shadow: none;">
                                             ${arr.length - index}.
                                         </span>
-                                        <span class="history-text" style="font-weight: bold; color: #4dabf7;">${entry.ip}</span>
+                                        <span class="history-text" style="font-weight: bold; color: #4dabf7;">${escapeHtml(entry.ip)}</span>
                                     </div>
                                     <div class="history-text" style="font-size: 13px; color: #aaa; margin-top: 5px;">
-                                        ${entry.info?.city || "-"}, ${entry.info?.region || "-"}, ${entry.info?.country || "-"}
+                                        ${escapeHtml(entry.info?.city) || "-"}, ${escapeHtml(entry.info?.region) || "-"}, ${escapeHtml(entry.info?.country) || "-"}
                                     </div>
                                 </div>
                                 ${entry.hasScreenshot && photoAvailable ? `<div style="margin-left: 10px; width: 60px; height: 60px; border-radius: 4px; overflow: hidden; border: 1px solid #333; flex-shrink: 0;">
@@ -3173,12 +3194,12 @@
                 </div>
             </div>
             <div class="history-text" style="color: white; margin-bottom: 15px;">
-                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.ip}:</span> <span style="user-select: all;">${entry.ip}</span></div>
-                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.time}:</span> ${entry.timestamp}</div>
-                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.city}:</span> ${info.city || "-"}</div>
-                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.region}:</span> ${info.region || "-"}</div>
-                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.country}:</span> ${info.country || "-"}</div>
-                <div><span style="color: #4dabf7; font-weight: bold;">${t.coordinates}:</span> (${info.latitude || "-"}, ${info.longitude || "-"})</div>
+                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.ip}:</span> <span style="user-select: all;">${escapeHtml(entry.ip)}</span></div>
+                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.time}:</span> ${escapeHtml(entry.timestamp)}</div>
+                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.city}:</span> ${escapeHtml(info.city) || "-"}</div>
+                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.region}:</span> ${escapeHtml(info.region) || "-"}</div>
+                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.country}:</span> ${escapeHtml(info.country) || "-"}</div>
+                <div><span style="color: #4dabf7; font-weight: bold;">${t.coordinates}:</span> (${escapeHtml(info.latitude) || "-"}, ${escapeHtml(info.longitude) || "-"})</div>
             </div>
             <button onclick="document.getElementById('screenshotModal').remove()" style="background: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; width: 100%; transition: background 0.2s;"
                     onmouseover="this.style.background='#c82333'"
@@ -3446,12 +3467,12 @@
     <div id="infoModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; justify-content: center; align-items: center;">
         <div style="background: #1a1a1a; border-radius: 10px; width: 90%; max-width: 500px; padding: 20px; box-shadow: 0 5px 25px rgba(0,0,0,0.8); border: 1px solid #333;">
             <div class="history-text" style="color: white; margin-bottom: 15px;">
-                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.ip}:</span> <span style="user-select: all;">${entry.ip}</span></div>
-                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.time}:</span> ${entry.timestamp}</div>
-                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.city}:</span> ${info.city || "-"}</div>
-                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.region}:</span> ${info.region || "-"}</div>
-                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.country}:</span> ${info.country || "-"}</div>
-                <div><span style="color: #4dabf7; font-weight: bold;">${t.coordinates}:</span> (${info.latitude || "-"}, ${info.longitude || "-"})</div>
+                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.ip}:</span> <span style="user-select: all;">${escapeHtml(entry.ip)}</span></div>
+                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.time}:</span> ${escapeHtml(entry.timestamp)}</div>
+                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.city}:</span> ${escapeHtml(info.city) || "-"}</div>
+                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.region}:</span> ${escapeHtml(info.region) || "-"}</div>
+                <div style="margin-bottom: 8px;"><span style="color: #4dabf7; font-weight: bold;">${t.country}:</span> ${escapeHtml(info.country) || "-"}</div>
+                <div><span style="color: #4dabf7; font-weight: bold;">${t.coordinates}:</span> (${escapeHtml(info.latitude) || "-"}, ${escapeHtml(info.longitude) || "-"})</div>
             </div>
             <button onclick="document.getElementById('infoModal').remove()" style="background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; width: 100%; transition: background 0.2s;" onmouseover="this.style.background='#0069d9'" onmouseout="this.style.background='#007bff'">
                 <i class="fas fa-times"></i> ${t.close}
@@ -3750,7 +3771,9 @@
         </div>
     </div>`;
     _insertAdjacentHTMLToBody10("beforeend", galleryHTML);
-    document.getElementById("userStylesModal").style.display = "none";
+    const userStylesModal = document.getElementById("userStylesModal");
+    if (userStylesModal)
+      userStylesModal.style.display = "none";
     document.querySelectorAll(".gallery-item").forEach((item) => {
       item.addEventListener("mouseenter", function() {
         this.style.borderColor = "#007bff";
@@ -3800,19 +3823,25 @@
           duration: 3e3
         });
         document.getElementById("galleryModal").remove();
-        document.getElementById("userStylesModal").style.display = "flex";
+        const usm1 = document.getElementById("userStylesModal");
+        if (usm1)
+          usm1.style.display = "flex";
       });
     });
     document.getElementById("closeGalleryBtn").onclick = function() {
       document.getElementById("galleryModal").remove();
-      document.getElementById("userStylesModal").style.display = "flex";
+      const usm2 = document.getElementById("userStylesModal");
+      if (usm2)
+        usm2.style.display = "flex";
     };
     document.addEventListener("keydown", function escGalleryHandler(e) {
       if (e.key === "Escape") {
         const modal = document.getElementById("galleryModal");
         if (modal) {
           modal.remove();
-          document.getElementById("userStylesModal").style.display = "flex";
+          const usm3 = document.getElementById("userStylesModal");
+          if (usm3)
+            usm3.style.display = "flex";
           document.removeEventListener("keydown", escGalleryHandler);
         }
       }
@@ -3995,8 +4024,12 @@
   var REVIEW_URL = "https://chromewebstore.google.com/detail/pdkdjcijjkhhkfdfbdgdfdgobnliphjd/reviews";
   var REVIEW_SNOOZE_MS = 30 * 24 * 60 * 60 * 1e3;
   var _getTimeElapsed2 = () => 0;
+  var _getLang15 = () => localStorage.getItem("chilltool_lang") || "en";
   function setGetTimeElapsed(fn) {
     _getTimeElapsed2 = fn;
+  }
+  function setGetLang(fn) {
+    _getLang15 = fn;
   }
   function showReviewPrompt() {
     if (document.getElementById("reviewModal"))
@@ -4025,8 +4058,8 @@
     title.style.fontSize = "24px";
     title.style.fontWeight = "600";
     title.style.marginBottom = "12px";
-    const lang = typeof getLang === "function" ? getLang() : localStorage.getItem("chilltool_lang") || "en";
-    const t = typeof translations !== "undefined" && translations[lang] ? translations[lang] : translations.en;
+    const lang = _getLang15();
+    const t = translations_default[lang] || translations_default.en;
     title.textContent = t.reviewTitle || "Enjoying ChillTool's?";
     const body = document.createElement("div");
     body.style.fontSize = "16px";
@@ -4470,6 +4503,8 @@
   var connectionHistory = [];
   var MAX_SCREENSHOTS = 50;
   function captureAndStoreScreenshot(videoElement, ip) {
+    let retryCount = 0;
+    const MAX_RETRIES = 5;
     const captureFrame = () => {
       try {
         const canvas = document.createElement("canvas");
@@ -4511,7 +4546,10 @@
         }
       } catch (error) {
         console.error("Error capturing screenshot:", error);
-        setTimeout(captureFrame, 500);
+        retryCount++;
+        if (retryCount < MAX_RETRIES) {
+          setTimeout(captureFrame, 500);
+        }
       }
     };
     if (videoElement.readyState >= 2) {
@@ -4539,7 +4577,7 @@
 
   // src/features/country-leaderboard.js
   var COUNTRY_LEADERBOARD_STORAGE_KEY2 = "countryLeaderboardCounts";
-  var lastCountryCountedIP2 = null;
+  var lastCountryCountedIP = null;
   var currentStreakCountry = null;
   var currentStreakCount = 0;
   function safeJsonParse(value, fallback) {
@@ -4594,14 +4632,14 @@
   function incrementLeaderboardForCurrentPartner(ip, fallbackCountryName) {
     if (!ip)
       return;
-    if (lastCountryCountedIP2 === ip)
+    if (lastCountryCountedIP === ip)
       return;
     const fromDom = getPartnerCountryFromDom();
     const countryToUse = fromDom || fallbackCountryName;
     if (!countryToUse)
       return;
     incrementCountryCount(countryToUse);
-    lastCountryCountedIP2 = ip;
+    lastCountryCountedIP = ip;
   }
   function updateCountryStreak(country) {
     if (!country || country === "N/A")
@@ -4637,9 +4675,12 @@
     const total = entries.reduce((sum, e) => sum + e.count, 0);
     return { entries, total };
   }
+  function resetLeaderboardDedup() {
+    lastCountryCountedIP = null;
+  }
 
   // src/features/ip-handler.js
-  var _getLang15 = () => "en";
+  var _getLang16 = () => "en";
   var _translations14 = {};
   var _doubleSkipButton = () => {
   };
@@ -4648,7 +4689,7 @@
   };
   function setDeps15(deps) {
     if (deps.getLang)
-      _getLang15 = deps.getLang;
+      _getLang16 = deps.getLang;
     if (deps.translations)
       _translations14 = deps.translations;
     if (deps.doubleSkipButton)
@@ -4690,13 +4731,13 @@
     if (ipBox) {
       ipBox.style.display = getIsIpDisplayEnabled() ? "block" : "none";
     }
-    const lang = _getLang15();
+    const lang = _getLang16();
     const t = _translations14[lang];
     if (ipBox) {
       ipBox.innerHTML = `
         <h3 style='color: #fff; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; margin: 0 0 10px 0;'>ChillTool's</h3>
         <div style="margin-bottom: 10px;">
-            <span style="color: #fff; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.ip}: ${ip} - <i>${t.loading}</i></span>
+            <span style="color: #fff; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.ip}: ${escapeHtml(ip)} - <i>${t.loading}</i></span>
         </div>
     `;
     }
@@ -4737,12 +4778,12 @@
       ipBox.innerHTML = `
             <h3 style='color: #fff; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; margin: 0 0 10px 0;'>ChillTool's</h3>
             <div style="color: #fff; margin-bottom: 15px;">
-                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.ip}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.ip}</span> <span id="copyIpBtn" title="Copy IP" style="cursor:pointer; margin-left:6px; opacity:0.8; font-size:11px; user-select:none; background: rgba(128,128,128,0.15); border: 1px solid rgba(128,128,128,0.4); border-radius: 4px; padding: 1px 5px; vertical-align: middle; transition: background 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" onmouseover="this.style.background='rgba(128,128,128,0.3)'" onmouseout="this.style.background='rgba(128,128,128,0.15)'" onclick="navigator.clipboard.writeText('${locationInfo.ip}').then(()=>{ this.textContent='\u2705'; setTimeout(()=>{ this.textContent='\u{1F4CB}'; }, 1500); })">\u{1F4CB}</span> <br>
-                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.city}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.city}</span> <br>
-                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.region}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.state}</span> <br>
-                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.country}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.country}</span>${getStreakBadgeHtml()} <br>
-                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">ISP:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.organization}</span> <br>
-                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.coordinates}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">(${locationInfo.latitude}, ${locationInfo.longitude})</span> <br>
+                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.ip}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${escapeHtml(locationInfo.ip)}</span> <span id="copyIpBtn" title="Copy IP" style="cursor:pointer; margin-left:6px; opacity:0.8; font-size:11px; user-select:none; background: rgba(128,128,128,0.15); border: 1px solid rgba(128,128,128,0.4); border-radius: 4px; padding: 1px 5px; vertical-align: middle; transition: background 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" onmouseover="this.style.background='rgba(128,128,128,0.3)'" onmouseout="this.style.background='rgba(128,128,128,0.15)'" onclick="navigator.clipboard.writeText('${escapeHtml(locationInfo.ip)}').then(()=>{ this.textContent='\u2705'; setTimeout(()=>{ this.textContent='\u{1F4CB}'; }, 1500); })">\u{1F4CB}</span> <br>
+                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.city}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${escapeHtml(locationInfo.city)}</span> <br>
+                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.region}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${escapeHtml(locationInfo.state)}</span> <br>
+                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.country}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${escapeHtml(locationInfo.country)}</span>${getStreakBadgeHtml()} <br>
+                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">ISP:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${escapeHtml(locationInfo.organization)}</span> <br>
+                <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.coordinates}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">(${escapeHtml(locationInfo.latitude)}, ${escapeHtml(locationInfo.longitude)})</span> <br>
                 <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">Timer:</strong> <span id="callTimer" style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; font-family: monospace;">${initialTime}</span>
             </div>
         `;
@@ -4840,16 +4881,12 @@
       });
       buttonObserver.observe(document.documentElement, { childList: true, subtree: true });
     }
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" || e.keyCode === 27) {
-      }
-    });
   }
 
   // src/features/version-check.js
-  var _getLang16 = () => "en";
-  function setGetLang(fn) {
-    _getLang16 = fn;
+  var _getLang17 = () => "en";
+  function setGetLang2(fn) {
+    _getLang17 = fn;
   }
   function compareVersions(a, b) {
     const pa = String(a).split(".").map((n) => parseInt(n, 10) || 0);
@@ -4866,7 +4903,7 @@
     return 0;
   }
   function showOutdatedToast() {
-    const lang = _getLang16();
+    const lang = _getLang17();
     const t = translations_default[lang] || translations_default.en;
     const msg = t.outdatedExtension || "Extension is outdated!";
     showNotification("ChillTools", msg, {
@@ -4879,7 +4916,7 @@
     });
   }
   function showBetaTesterToast() {
-    const lang = _getLang16();
+    const lang = _getLang17();
     const t = translations_default[lang] || translations_default.en;
     const msg = t.betaWelcome || "Welcome Aboard, Beta Tester!";
     showNotification("ChillTools", msg, {
@@ -4912,7 +4949,6 @@
     } catch (e) {
     }
   }
-  setTimeout(checkOutdatedVersion, 3e3);
 
   // src/timer/session-timer.js
   var isPausedDueToDisconnect = false;
@@ -4958,9 +4994,7 @@
       ".disconnectMessage",
       ".information",
       'div[style*="text-align: center"]',
-      'div[class*="disconnect"]',
-      'div:contains("You have disconnected")',
-      'div:contains("disconnected")'
+      'div[class*="disconnect"]'
     ];
     let disconnectMessage = null;
     for (const selector of disconnectSelectors) {
@@ -5198,7 +5232,7 @@
 
   // src/main.js
   var translationsRef = translations_default;
-  var currentLang = () => localStorage.getItem("lang") || "en";
+  var currentLang = () => localStorage.getItem("chilltool_lang") || "en";
   setDeps({
     getLang: currentLang,
     translations: translationsRef,
@@ -5230,7 +5264,7 @@
   });
   setDeps4({ ...commonDeps, showScreenshot });
   setDeps5(commonDeps);
-  setDeps6({ ...commonDeps, getSortedCountryLeaderboard });
+  setDeps6({ ...commonDeps, getSortedCountryLeaderboard, resetLeaderboardDedup });
   setDeps7({ ...commonDeps, showScreenshot, showInfoWithoutScreenshot, connectionHistory });
   setDeps8({
     ...commonDeps,
@@ -5246,9 +5280,10 @@
   setDeps13({ ...commonDeps, injectToBody });
   setDeps2(commonDeps);
   setGetTimeElapsed(getTimeElapsed);
+  setGetLang(currentLang);
   setDeps14({ getChatBoxColor, checkBackgroundColor });
   setDeps15({ getLang: currentLang, translations: translationsRef, doubleSkipButton, getSelectedCountries, showNotification });
-  setGetLang(currentLang);
+  setGetLang2(currentLang);
   setDeps17({
     isMobile: isMobile2,
     isUmingle: window.location.hostname.includes("umingle"),
