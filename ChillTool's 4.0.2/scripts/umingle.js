@@ -4896,6 +4896,8 @@ const replaceLogo = () => {
             }
             // console.log('Is in start state:', isInStartState);
             // console.log('Should stop timer:', shouldStopTimer);
+            console.log('This extension is currently detected!'); // Remove this after putting the new bypass!
+            console.log('Do not use it until an announcement on discord!'); // Remove this after putting the new bypass!
             
             if (isVideoPage && !shouldStopTimer && timeDiff > 0 && timeDiff < 600) {
                 const newTime = getTimeElapsed() + timeDiff;
