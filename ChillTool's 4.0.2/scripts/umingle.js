@@ -335,7 +335,7 @@ function showCountryLeaderboard() {
                     </div>
                 </div>
                 <div style="padding: 12px; background: #222; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #333; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
-                    chilltools.it
+                    chilltools.net
                 </div>
             </div>
         </div>
@@ -2234,7 +2234,7 @@ const translations = {
                             </button>
                         </div>
                         <div>
-                            chilltools.it
+                            chilltools.net
                         </div>
                     </div>
                 </div>
@@ -2537,7 +2537,7 @@ const translations = {
                         </h3>
                     </div>
                     <div style="padding: 25px; overflow-y: auto; flex-grow: 1; min-height: 120px; color: #eee; font-size: 16px; line-height: 1.7;">
-                        <p style="margin: 0; font-size: 16px;">${t.usingExtensionTos || 'By using the Extension "ChillTool\'s" you automatically accept the'} <a href="https://chilltools.it/tos/" target="_blank" style="color: #4CAF50; text-decoration: underline; font-weight: 500;">${t.termsOfService || 'Terms of Service'}</a>.</p>
+                        <p style="margin: 0; font-size: 16px;">${t.usingExtensionTos || 'By using the Extension "ChillTool\'s" you automatically accept the'} <a href="https://chilltools.net/tos/" target="_blank" style="color: #4CAF50; text-decoration: underline; font-weight: 500;">${t.termsOfService || 'Terms of Service'}</a>.</p>
                     </div>
                     <div style="padding: 15px; background: #0a0a0a; border-top: 1px solid #333; display: flex; justify-content: flex-end;">
                         <button id="acceptTos" style="
@@ -2825,7 +2825,7 @@ const translations = {
                         </div>
                     </div>
                     <div style="padding: 12px; background: #222; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #333; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
-                        chilltools.it
+                        chilltools.net
                     </div>
                 </div>
             </div>`;
@@ -2908,7 +2908,7 @@ const translations = {
                 showSettings();
             };
             document.getElementById('tosBtn').onclick = function() {
-                window.open('https://chilltools.it/tos', '_blank');
+                window.open('https://chilltools.net/tos', '_blank');
             };
             document.getElementById('userStylesBtn').onclick = function() {
                 showUserStylesModal();
@@ -3583,7 +3583,7 @@ const translations = {
                         </div>
                     </div>
                     <div style="padding: 12px; background: #222; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #333; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
-                        chilltools.it
+                        chilltools.net
                     </div>
                 </div>
             </div>`;
@@ -3736,7 +3736,7 @@ const translations = {
                         </div>
                     </div>
                     <div style="padding: 12px; background: #222; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #333; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
-                        chilltools.it
+                        chilltools.net
                     </div>
                 </div>
             </div>`;
@@ -4673,7 +4673,7 @@ const translations = {
             logo.style.boxShadow = "0 2px 10px rgba(0,0,0,0.0)";
             logo.style.zIndex = "5"; 
             
-            logo.addEventListener("click", () => window.open("https://chilltools.it", "_blank"));
+            logo.addEventListener("click", () => window.open("https://chilltools.net", "_blank"));
         };
 
 const replaceLogo = () => {
@@ -5057,7 +5057,7 @@ const replaceLogo = () => {
                         </button>
                     </div>
                     <div style="padding: 12px; background: #222; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #333; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">
-                        chilltools.it
+                        chilltools.net
                     </div>
                 </div>
             </div>`;
@@ -5234,5 +5234,5 @@ const replaceLogo = () => {
         });
         
         // if you see this message, please donate to support the development of the extension, thx! (Open ticket on discord or use funding.yml)
-        // to check if your usage falls under prohibited activities, please visit chilltools.it/legal
+        // to check if your usage falls under prohibited activities, please visit chilltools.net/legal
         })();
