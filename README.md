@@ -1,9 +1,14 @@
 # ⚠️ DISCLAIMER
 
-### Update 4 june 2026:
-- **Detected Again**
+## UPDATE 10/04/2026
+- **We ARE ceasing** development, Thanks for everything <3
 
-**Beware of imitations / use only the official ChillTool's release.**
+- ( CURRENTLY DETECTED )
+
+This is currently permanent! (We might change ideas) <h1> probably wont </h1>
+
+
+<!--**Beware of imitations / use only the official ChillTool's release.**
 --
 ### Disclaimer
 
@@ -59,3 +64,4 @@ Stay up to date with the newest releases for the best possible experience.
 **Note:** This project is not affiliated with, endorsed by, or associated with Uhmegle/Umingle or any related platform. All trademarks and platform names are the property of their respective owners.
 --
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ChillSpotIT/ChillTool-s)
+-->
