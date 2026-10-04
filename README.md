@@ -1,6 +1,6 @@
 # ⚠️ DISCLAIMER
 
-## UPDATE 10/04/2026
+## UPDATE 04/10/2026
 - **We ARE ceasing** development, Thanks for everything <3
 
 - ( CURRENTLY DETECTED )
