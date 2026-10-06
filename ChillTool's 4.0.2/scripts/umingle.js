@@ -175,6 +175,123 @@
 
         const CURRENT_VERSION = '4.0.2';
 
+        const REMEMBERED_ENCOUNTERS_STORAGE_KEY = 'rememberedEncountersV1';
+        const REMEMBERED_ENCOUNTERS_ENABLED_KEY = 'rememberEncountersEnabled';
+        const REMEMBERED_ENCOUNTERS_RETENTION_KEY = 'rememberEncountersRetentionDays';
+        const MAX_REMEMBERED_ENCOUNTERS = 250;
+
+        function getExtensionStorage() {
+            if (typeof browser !== 'undefined' && browser.storage && browser.storage.local) {
+                return browser.storage.local;
+            }
+            if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+                return chrome.storage.local;
+            }
+            return null;
+        }
+
+        function isEncounterMemoryEnabled() {
+            return localStorage.getItem(REMEMBERED_ENCOUNTERS_ENABLED_KEY) === 'true';
+        }
+
+        function getEncounterRetentionDays() {
+            const value = parseInt(localStorage.getItem(REMEMBERED_ENCOUNTERS_RETENTION_KEY) || '7', 10);
+            return [1, 7, 30].includes(value) ? value : 7;
+        }
+
+        async function rememberEncounter(ip, info) {
+            if (!isEncounterMemoryEnabled()) return null;
+
+            const storage = getExtensionStorage();
+            if (!storage) return null;
+
+            try {
+                const now = Date.now();
+                const cutoff = now - (getEncounterRetentionDays() * 24 * 60 * 60 * 1000);
+                const stored = await storage.get(REMEMBERED_ENCOUNTERS_STORAGE_KEY);
+                const saved = Array.isArray(stored[REMEMBERED_ENCOUNTERS_STORAGE_KEY])
+                    ? stored[REMEMBERED_ENCOUNTERS_STORAGE_KEY]
+                    : [];
+                const encounters = saved.filter(item => item && item.ip && item.lastSeen >= cutoff);
+                const existing = encounters.find(item => item.ip === ip);
+                const previousSeen = existing ? existing.lastSeen : null;
+
+                if (existing) {
+                    existing.count = (parseInt(existing.count, 10) || 1) + 1;
+                    existing.lastSeen = now;
+                    existing.country = info.country;
+                    existing.region = info.region;
+                    existing.city = info.city;
+                    existing.organization = info.organization;
+                } else {
+                    encounters.push({
+                        ip: ip,
+                        country: info.country,
+                        region: info.region,
+                        city: info.city,
+                        organization: info.organization,
+                        firstSeen: now,
+                        lastSeen: now,
+                        count: 1
+                    });
+                }
+
+                encounters.sort((a, b) => b.lastSeen - a.lastSeen);
+                const trimmed = encounters.slice(0, MAX_REMEMBERED_ENCOUNTERS);
+                await storage.set({ [REMEMBERED_ENCOUNTERS_STORAGE_KEY]: trimmed });
+
+                const current = trimmed.find(item => item.ip === ip);
+                return current ? { ...current, previousSeen: previousSeen } : null;
+            } catch (error) {
+                console.error('could not remember encounter', error);
+                return null;
+            }
+        }
+
+        async function clearRememberedEncounters() {
+            const storage = getExtensionStorage();
+            if (!storage) return;
+            await storage.remove(REMEMBERED_ENCOUNTERS_STORAGE_KEY);
+        }
+
+        async function pruneRememberedEncounters() {
+            const storage = getExtensionStorage();
+            if (!storage) return;
+
+            const stored = await storage.get(REMEMBERED_ENCOUNTERS_STORAGE_KEY);
+            const saved = Array.isArray(stored[REMEMBERED_ENCOUNTERS_STORAGE_KEY])
+                ? stored[REMEMBERED_ENCOUNTERS_STORAGE_KEY]
+                : [];
+            const cutoff = Date.now() - (getEncounterRetentionDays() * 24 * 60 * 60 * 1000);
+            const encounters = saved
+                .filter(item => item && item.ip && item.lastSeen >= cutoff)
+                .sort((a, b) => b.lastSeen - a.lastSeen)
+                .slice(0, MAX_REMEMBERED_ENCOUNTERS);
+            await storage.set({ [REMEMBERED_ENCOUNTERS_STORAGE_KEY]: encounters });
+        }
+
+        function formatEncounterAge(timestamp) {
+            if (!timestamp) return '';
+            const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+            if (seconds < 60) return 'just now';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            return `${Math.floor(hours / 24)}d ago`;
+        }
+
+        function getEncounterBadgeHtml(encounter) {
+            if (!encounter || encounter.count < 2 || !encounter.previousSeen) return '';
+            return `<span title="last seen ${formatEncounterAge(encounter.previousSeen)}" style="display:inline-block; margin-left:6px; padding:1px 6px; border-radius:8px; background:rgba(255,193,7,0.18); border:1px solid rgba(255,193,7,0.55); color:#ffd166; font-size:11px; font-weight:700;">seen ${encounter.count} times</span>`;
+        }
+
+        if (isEncounterMemoryEnabled()) {
+            pruneRememberedEncounters().catch(error => {
+                console.error('could not prune remembered encounters', error);
+            });
+        }
+
         const COUNTRY_LEADERBOARD_STORAGE_KEY = 'countryLeaderboardCounts';
         let lastCountryCountedIP = null;
         let currentStreakCountry = null;
@@ -1244,7 +1361,12 @@ const translations = {
         countryLeaderboardNoData: 'No data',
         countryLeaderboardClear: 'Clear leaderboard',
         countryLeaderboardClearConfirm: 'Clear the entire country leaderboard?',
-        noteMaxChars: 'Max 50 characters'
+        noteMaxChars: 'Max 50 characters',
+        rememberEncounters: 'remember encounters',
+        rememberEncountersDesc: 'stores ip and location info only screenshots stay temporary turn it off to stop new saves',
+        rememberFor: 'remember for',
+        clearRememberedEncounters: 'clear remembered encounters',
+        rememberedEncountersCleared: 'remembered encounters cleared'
     },
     zh: {
         showIpDisplay: '显示IP',
@@ -2713,6 +2835,31 @@ const translations = {
                                 </div>
                             </div>
                         </div>
+
+                        <div style="margin-bottom: 15px; padding: 12px; border-radius: 6px; background: rgba(255,255,255,0.05);">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <input type="checkbox" id="rememberEncountersCheckbox" ${isEncounterMemoryEnabled() ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: #4a90e2; cursor: pointer;">
+                                <label for="rememberEncountersCheckbox" style="color: #e0e0e0; font-size: 14px; font-weight: 500; cursor: pointer;">
+                                    ${t.rememberEncounters || translations.en.rememberEncounters}
+                                </label>
+                            </div>
+                            <div style="color: #888; font-size: 12px; line-height: 1.4; margin-bottom: 10px;">
+                                ${t.rememberEncountersDesc || translations.en.rememberEncountersDesc}
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <label for="rememberEncountersRetention" style="color: #bbb; font-size: 12px; white-space: nowrap;">
+                                    ${t.rememberFor || translations.en.rememberFor}
+                                </label>
+                                <select id="rememberEncountersRetention" style="flex: 1; padding: 7px; border-radius: 4px; border: 1px solid #444; background: #222; color: #fff;">
+                                    <option value="1" ${getEncounterRetentionDays() === 1 ? 'selected' : ''}>1 day</option>
+                                    <option value="7" ${getEncounterRetentionDays() === 7 ? 'selected' : ''}>7 days</option>
+                                    <option value="30" ${getEncounterRetentionDays() === 30 ? 'selected' : ''}>30 days</option>
+                                </select>
+                                <button id="clearRememberedEncountersBtn" style="background: #dc3545; color: white; border: none; padding: 7px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                    ${t.clearRememberedEncounters || translations.en.clearRememberedEncounters}
+                                </button>
+                            </div>
+                        </div>
                         
                         <div style="display: flex; gap: 10px; margin-top: 10px;">
                             <button id="videoBorderBtn" style="
@@ -2900,6 +3047,45 @@ const translations = {
                     localStorage.removeItem('ipDisplayEnabled');
                 }
             });
+
+            const rememberEncountersCheckbox = document.getElementById('rememberEncountersCheckbox');
+            const rememberEncountersRetention = document.getElementById('rememberEncountersRetention');
+            const clearRememberedEncountersBtn = document.getElementById('clearRememberedEncountersBtn');
+
+            if (rememberEncountersCheckbox && rememberEncountersRetention) {
+                rememberEncountersRetention.disabled = !rememberEncountersCheckbox.checked;
+                rememberEncountersRetention.style.opacity = rememberEncountersCheckbox.checked ? '1' : '0.5';
+
+                rememberEncountersCheckbox.addEventListener('change', function() {
+                    localStorage.setItem(REMEMBERED_ENCOUNTERS_ENABLED_KEY, this.checked ? 'true' : 'false');
+                    rememberEncountersRetention.disabled = !this.checked;
+                    rememberEncountersRetention.style.opacity = this.checked ? '1' : '0.5';
+                });
+
+                rememberEncountersRetention.addEventListener('change', async function() {
+                    localStorage.setItem(REMEMBERED_ENCOUNTERS_RETENTION_KEY, this.value);
+                    try {
+                        await pruneRememberedEncounters();
+                    } catch (error) {
+                        console.error('could not update encounter retention', error);
+                    }
+                });
+            }
+
+            if (clearRememberedEncountersBtn) {
+                clearRememberedEncountersBtn.addEventListener('click', async function() {
+                    if (!confirm('clear all remembered encounters')) return;
+                    try {
+                        await clearRememberedEncounters();
+                        showNotification('history', t.rememberedEncountersCleared || translations.en.rememberedEncountersCleared, {
+                            type: 'success',
+                            duration: 2500
+                        });
+                    } catch (error) {
+                        console.error('could not clear remembered encounters', error);
+                    }
+                });
+            }
             
             document.getElementById('langSelect').onchange = function() {
                 localStorage.setItem('chilltool_lang', this.value);
@@ -3859,7 +4045,7 @@ const translations = {
         let timerInterval = null;
 
         async function handleNewIP(ip) {
-            if (!ip || lastHandledIP === ip) return;
+            if (!ip) return;
             
             lastHandledIP = ip;
             
@@ -3921,6 +4107,8 @@ const translations = {
             const locationInfo = await getLocation(ip);
             if (!locationInfo || currentSession.ip !== ip) return;
             currentSession.info = locationInfo;
+            const rememberedEncounter = await rememberEncounter(ip, locationInfo);
+            if (currentSession.ip !== ip) return;
             incrementLeaderboardForCurrentPartner(ip, locationInfo.country);
             updateCountryStreak(locationInfo.country);
                 
@@ -3962,7 +4150,7 @@ const translations = {
                     ipBox.innerHTML = `
                     <h3 style='color: #fff; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; margin: 0 0 10px 0;'>ChillTool's</h3>
                     <div style="color: #fff; margin-bottom: 15px;">
-                        <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.ip}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.ip}</span> <span id="copyIpBtn" title="Copy IP" style="cursor:pointer; margin-left:6px; opacity:0.8; font-size:11px; user-select:none; background: rgba(128,128,128,0.15); border: 1px solid rgba(128,128,128,0.4); border-radius: 4px; padding: 1px 5px; vertical-align: middle; transition: background 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" onmouseover="this.style.background='rgba(128,128,128,0.3)'" onmouseout="this.style.background='rgba(128,128,128,0.15)'" onclick="navigator.clipboard.writeText('${locationInfo.ip}').then(()=>{ this.textContent='✅'; setTimeout(()=>{ this.textContent='📋'; }, 1500); })">📋</span> <br>
+                        <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.ip}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.ip}</span>${getEncounterBadgeHtml(rememberedEncounter)} <span id="copyIpBtn" title="copy ip" style="cursor:pointer; margin-left:6px; opacity:0.8; font-size:11px; user-select:none; background: rgba(128,128,128,0.15); border: 1px solid rgba(128,128,128,0.4); border-radius: 4px; padding: 1px 5px; vertical-align: middle; transition: background 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" onmouseover="this.style.background='rgba(128,128,128,0.3)'" onmouseout="this.style.background='rgba(128,128,128,0.15)'" onclick="navigator.clipboard.writeText('${locationInfo.ip}').then(()=>{ this.textContent='✅'; setTimeout(()=>{ this.textContent='📋'; }, 1500); })">📋</span> <br>
                         <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.city}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.city}</span> <br>
                         <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.region}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.state}</span> <br>
                         <strong style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${t.country}:</strong> <span style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${locationInfo.country}</span>${getStreakBadgeHtml()} <br>
