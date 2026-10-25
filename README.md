@@ -3,10 +3,6 @@
 ## UPDATE 04/10/2026
 - **We ARE ceasing** development, Thanks for everything <3
 
-- ( CURRENTLY DETECTED )
-
-This is currently permanent! (We might change ideas) <h1> probably wont </h1>
-
 
 <!--**Beware of imitations / use only the official ChillTool's release.**
 --
