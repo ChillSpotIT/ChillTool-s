@@ -12,6 +12,7 @@
     "https://umingle.com/*"
   ],
   "permissions": [
+    "storage",
     "https://umingle.com/*"
   ],
   "content_scripts": [

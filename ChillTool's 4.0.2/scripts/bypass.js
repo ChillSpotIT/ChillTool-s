@@ -45,6 +45,7 @@
     WebSocket.prototype.send = function(data) {
         let finalData = data;
         if (typeof data === 'string' && data.includes('"event":"findPeer"')) {
+            seenIps.clear();
             try {
                 const parsed = JSON.parse(data);
                 if (parsed.description && parsed.description.sdp) {
